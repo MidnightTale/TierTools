@@ -1,0 +1,225 @@
+# Base attribute values for different materials and item types
+# These values are the base values that will be multiplied by tier and quality
+
+# Netherite items (highest tier)
+NETHERITE_SWORD:
+  attack_damage: 8.0
+  attack_speed: 1.6
+
+NETHERITE_AXE:
+  attack_damage: 10.0
+  attack_speed: 1.0
+
+NETHERITE_PICKAXE:
+  attack_damage: 6.0
+  attack_speed: 1.2
+  mining_speed: 9.0
+
+NETHERITE_SHOVEL:
+  attack_damage: 5.5
+  attack_speed: 1.0
+  mining_speed: 8.0
+
+NETHERITE_HOE:
+  attack_damage: 1.0
+  attack_speed: 4.0
+
+NETHERITE_HELMET:
+  armor: 3.0
+  armor_toughness: 3.0
+  knockback_resistance: 0.1
+
+NETHERITE_CHESTPLATE:
+  armor: 8.0
+  armor_toughness: 3.0
+  knockback_resistance: 0.1
+
+NETHERITE_LEGGINGS:
+  armor: 6.0
+  armor_toughness: 3.0
+  knockback_resistance: 0.1
+
+NETHERITE_BOOTS:
+  armor: 3.0
+  armor_toughness: 3.0
+  knockback_resistance: 0.1
+
+# Diamond items
+DIAMOND_SWORD:
+  attack_damage: 7.0
+  attack_speed: 1.6
+
+DIAMOND_AXE:
+  attack_damage: 9.0
+  attack_speed: 1.0
+
+DIAMOND_PICKAXE:
+  attack_damage: 5.0
+  attack_speed: 1.2
+  mining_speed: 8.0
+
+DIAMOND_SHOVEL:
+  attack_damage: 4.5
+  attack_speed: 1.0
+  mining_speed: 7.0
+
+DIAMOND_HOE:
+  attack_damage: 1.0
+  attack_speed: 4.0
+
+DIAMOND_HELMET:
+  armor: 3.0
+  armor_toughness: 2.0
+
+DIAMOND_CHESTPLATE:
+  armor: 8.0
+  armor_toughness: 2.0
+
+DIAMOND_LEGGINGS:
+  armor: 6.0
+  armor_toughness: 2.0
+
+DIAMOND_BOOTS:
+  armor: 3.0
+  armor_toughness: 2.0
+
+# Iron items
+IRON_SWORD:
+  attack_damage: 6.0
+  attack_speed: 1.6
+
+IRON_AXE:
+  attack_damage: 7.0
+  attack_speed: 1.0
+
+IRON_PICKAXE:
+  attack_damage: 4.0
+  attack_speed: 1.2
+  mining_speed: 6.0
+
+IRON_SHOVEL:
+  attack_damage: 3.5
+  attack_speed: 1.0
+  mining_speed: 5.0
+
+IRON_HOE:
+  attack_damage: 1.0
+  attack_speed: 4.0
+
+IRON_HELMET:
+  armor: 2.0
+  armor_toughness: 0.0
+
+IRON_CHESTPLATE:
+  armor: 6.0
+  armor_toughness: 0.0
+
+IRON_LEGGINGS:
+  armor: 5.0
+  armor_toughness: 0.0
+
+IRON_BOOTS:
+  armor: 2.0
+  armor_toughness: 0.0
+
+# Gold items
+GOLDEN_SWORD:
+  attack_damage: 4.0
+  attack_speed: 1.6
+
+GOLDEN_AXE:
+  attack_damage: 5.0
+  attack_speed: 1.0
+
+GOLDEN_PICKAXE:
+  attack_damage: 2.0
+  attack_speed: 1.2
+  mining_speed: 12.0
+
+GOLDEN_SHOVEL:
+  attack_damage: 1.5
+  attack_speed: 1.0
+  mining_speed: 10.0
+
+GOLDEN_HOE:
+  attack_damage: 1.0
+  attack_speed: 4.0
+
+GOLDEN_HELMET:
+  armor: 2.0
+  armor_toughness: 0.0
+
+GOLDEN_CHESTPLATE:
+  armor: 5.0
+  armor_toughness: 0.0
+
+GOLDEN_LEGGINGS:
+  armor: 3.0
+  armor_toughness: 0.0
+
+GOLDEN_BOOTS:
+  armor: 1.0
+  armor_toughness: 0.0
+
+# Stone items
+STONE_SWORD:
+  attack_damage: 5.0
+  attack_speed: 1.6
+
+STONE_AXE:
+  attack_damage: 6.0
+  attack_speed: 1.0
+
+STONE_PICKAXE:
+  attack_damage: 3.0
+  attack_speed: 1.2
+  mining_speed: 4.0
+
+STONE_SHOVEL:
+  attack_damage: 2.5
+  attack_speed: 1.0
+  mining_speed: 3.0
+
+STONE_HOE:
+  attack_damage: 1.0
+  attack_speed: 4.0
+
+# Wooden items
+WOODEN_SWORD:
+  attack_damage: 4.0
+  attack_speed: 1.6
+
+WOODEN_AXE:
+  attack_damage: 5.0
+  attack_speed: 1.0
+
+WOODEN_PICKAXE:
+  attack_damage: 2.0
+  attack_speed: 1.2
+  mining_speed: 2.0
+
+WOODEN_SHOVEL:
+  attack_damage: 1.5
+  attack_speed: 1.0
+  mining_speed: 1.0
+
+WOODEN_HOE:
+  attack_damage: 1.0
+  attack_speed: 4.0
+
+# Leather armor
+LEATHER_HELMET:
+  armor: 1.0
+  armor_toughness: 0.0
+
+LEATHER_CHESTPLATE:
+  armor: 3.0
+  armor_toughness: 0.0
+
+LEATHER_LEGGINGS:
+  armor: 2.0
+  armor_toughness: 0.0
+
+LEATHER_BOOTS:
+  armor: 1.0
+  armor_toughness: 0.0 

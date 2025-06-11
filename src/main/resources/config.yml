@@ -48,6 +48,22 @@ tier_list:
   - Epic
   - Legendary
 
+# Tier Rarity Distribution
+# Controls how likely each tier is to be assigned
+# Higher weight means more likely to be chosen
+# Weights are relative to each other (e.g. 10:5:2:1:0.5)
+tier_rarity:
+  Common:
+    weight: 10.0
+  Uncommon:
+    weight: 5.0
+  Rare:
+    weight: 2.0
+  Epic:
+    weight: 1.0
+  Legendary:
+    weight: 0.5
+
 # Tier Properties Configuration
 # Each tier has a multiplier and a list of available attributes
 # The multiplier affects the base values of attributes
