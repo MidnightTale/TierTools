@@ -49,12 +49,14 @@ public class TierLoreManager {
 
         // Calculate interpolated color based on quality
         String qualityColor = calculateQualityColor(quality, colorThresholds);
+        TierTools.getInstance().getLogger().info("Quality: " + quality + ", Color: " + qualityColor);
 
         // Add tier and quality information
         String tierFormat = loreSection.getString("tier-format", "<tier> (<quality>%)");
+        String qualityText = String.format("%.2f", quality * 100);
         String tierText = tierFormat
             .replace("<tier>", tier.getName())
-            .replace("<quality>", qualityColor + String.format("%.2f", quality * 100) + "</color>");
+            .replace("<quality>", qualityColor + qualityText + "</color>");
         
         // Use tier color directly from config (should be in MiniMessage format)
         String tierColor = tier.getColor();

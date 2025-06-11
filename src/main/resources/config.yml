@@ -3,7 +3,7 @@ tiers:
     name: "Common"
     level: 1
     chance: 0.40
-    color: "&7"
+    color: "<color:#808080>"
     min-quality: 0.01
     max-quality: 0.50
     multiple: 1.2
@@ -13,7 +13,7 @@ tiers:
     name: "Uncommon"
     level: 2
     chance: 0.30
-    color: "&a"
+    color: "<color:#2E8B57>"
     min-quality: 0.20
     max-quality: 0.70
     multiple: 1.5
@@ -23,7 +23,7 @@ tiers:
     name: "Rare"
     level: 3
     chance: 0.20
-    color: "&9"
+    color: "<color:#4169E1>"
     min-quality: 0.40
     max-quality: 0.85
     multiple: 1.8
@@ -33,7 +33,7 @@ tiers:
     name: "Epic"
     level: 4
     chance: 0.08
-    color: "&5"
+    color: "<color:#9932CC>"
     min-quality: 0.60
     max-quality: 0.95
     multiple: 2.0
@@ -43,7 +43,7 @@ tiers:
     name: "Legendary"
     level: 5
     chance: 0.02
-    color: "&6"
+    color: "<color:#FFD700>"
     min-quality: 0.80
     max-quality: 1.00
     multiple: 2.5
@@ -118,14 +118,15 @@ tierable-items:
 lore:
   # Format for tier and quality display
   # Available placeholders: <tier>, <quality>
-  tier-format: "<color:#FFD700><tier> (<quality>%)</color>"
+  tier-format: "<tier> (<quality>%)"
 
   quality-colors:
     "0.0": "<color:#FF0000>"    # Red for 0% quality
-    "0.3": "<color:#FFA500>"    # Orange for 30% quality
-    "0.6": "<color:#FFFF00>"    # Yellow for 60% quality
-    "0.8": "<color:#00FF00>"    # Green for 80% quality
-    "1.0": "<color:#00FFFF>"    # Cyan for 100% quality
+    "0.2": "<color:#FF4500>"    # Orange-red for 20% quality
+    "0.4": "<color:#FFA500>"    # Orange for 40% quality
+    "0.6": "<color:#FFD700>"    # Gold for 60% quality
+    "0.8": "<color:#90EE90>"    # Light green for 80% quality
+    "1.0": "<color:#00FF00>"    # Bright green for 100% quality
 
 # Attribute configurations
 attributes:
