@@ -1,325 +1,110 @@
-# Lore Templates Configuration
-# Defines how item data should be displayed in the lore
-# Supports both MiniMessage and PlaceholderAPI formats
-# Available placeholders:
-# MiniMessage placeholders:
-#   <tier> - Item's tier name
-#   <quality> - Item's quality percentage
-#   <quality_color> - Color based on quality (returns a color tag)
-#   <attribute_name> - Name of an attribute
-#   <attribute_value> - Value of an attribute (with + or - prefix)
-#   <special_prefix> - Prefix for special attributes
-# PlaceholderAPI placeholders:
-#   %tier_tools_tier% - Item's tier name
-#   %tier_tools_quality% - Item's quality percentage
-#   %tier_tools_quality_color% - Color based on quality
-#   %tier_tools_attribute_name% - Name of current attribute
-#   %tier_tools_attribute_value% - Value of current attribute
-#   %tier_tools_special_prefix% - Prefix for special attributes
-lore_templates:
-  # Line symbols for attribute formatting
-  line_symbols:
-    enabled: true  # Master toggle for line symbols
-    symbols:
-      start: "┝"  # Symbol for the first attribute line
-      middle: "┝"  # Symbol for middle attribute lines
-      end: "┖"    # Symbol for the last attribute line
-      indent: "  " # Indentation before the symbol
-
-  # Templates support both MiniMessage and PlaceholderAPI formats
-  # MiniMessage format: <gray>Tier: <gold><tier> <quality_color>(<quality>%)
-  # PlaceholderAPI format: &7Tier: &6%tier_tools_tier% %tier_tools_quality_color%(%tier_tools_quality%%)
-  tier_line: "<gray>Tier: <gold><tier> <quality_color>(<quality>%)"
-  attribute_line: "<green><attribute_name> <attribute_value>"
-  special_attribute_line: "<aqua><attribute_name> <attribute_value> <aqua>(<special_prefix>)"
-  
-  # Alternative format using PlaceholderAPI (uncomment to use)
-  # tier_line: "&7Tier: &6%tier_tools_tier% %tier_tools_quality_color%(%tier_tools_quality%%)"
-  # attribute_line: "&a%tier_tools_attribute_name% %tier_tools_attribute_value%"
-  # special_attribute_line: "&b%tier_tools_attribute_name% %tier_tools_attribute_value% &b(%tier_tools_special_prefix%)"
-
-
-# Tier List Configuration
-# The order of tiers from lowest to highest
-tier_list:
-  - Common
-  - Uncommon
-  - Rare
-  - Epic
-  - Legendary
-
-# Tier Rarity Distribution
-# Controls how likely each tier is to be assigned
-# Higher weight means more likely to be chosen
-# Weights are relative to each other (e.g. 10:5:2:1:0.5)
-tier_rarity:
-  Common:
-    weight: 10.0
-  Uncommon:
-    weight: 5.0
-  Rare:
-    weight: 2.0
-  Epic:
-    weight: 1.0
-  Legendary:
-    weight: 0.5
-
-# Tier Properties Configuration
-# Each tier has a multiplier and a list of available attributes
-# The multiplier affects the base values of attributes
-# Available attributes determine which attributes can appear on items of this tier
-
 tiers:
-  Common:
-    multiplier: 1.0
-    available_attributes:
-      - ATTACK_DAMAGE
-      - ATTACK_SPEED
-      - MINING_EFFICIENCY
-      - BLOCK_BREAK_SPEED
-      - ARMOR
-      - ARMOR_TOUGHNESS
-      - MOVEMENT_SPEED
+  common:
+    name: "Common"
+    level: 1
+    chance: 50
+    color: "&7"
+    min-quality: 0
+    max-quality: 30
+    permissions:
+      - "tier.common"
+  uncommon:
+    name: "Uncommon"
+    level: 2
+    chance: 30
+    color: "&a"
+    min-quality: 20
+    max-quality: 50
+    permissions:
+      - "tier.uncommon"
+  rare:
+    name: "Rare"
+    level: 3
+    chance: 15
+    color: "&9"
+    min-quality: 40
+    max-quality: 70
+    permissions:
+      - "tier.rare"
+  epic:
+    name: "Epic"
+    level: 4
+    chance: 4
+    color: "&5"
+    min-quality: 60
+    max-quality: 85
+    permissions:
+      - "tier.epic"
+  legendary:
+    name: "Legendary"
+    level: 5
+    chance: 1
+    color: "&6"
+    min-quality: 80
+    max-quality: 100
+    permissions:
+      - "tier.legendary"
 
-  Uncommon:
-    multiplier: 1.3
-    available_attributes:
-      - ATTACK_DAMAGE
-      - ATTACK_SPEED
-      - MINING_EFFICIENCY
-      - BLOCK_BREAK_SPEED
-      - ARMOR
-      - ARMOR_TOUGHNESS
-      - MOVEMENT_SPEED
-      - ATTACK_KNOCKBACK
-      - KNOCKBACK_RESISTANCE
-      - OXYGEN_BONUS
-      - SAFE_FALL_DISTANCE
-
-  Rare:
-    multiplier: 1.7
-    available_attributes:
-      - ATTACK_DAMAGE
-      - ATTACK_SPEED
-      - MINING_EFFICIENCY
-      - BLOCK_BREAK_SPEED
-      - ARMOR
-      - ARMOR_TOUGHNESS
-      - MOVEMENT_SPEED
-      - ATTACK_KNOCKBACK
-      - KNOCKBACK_RESISTANCE
-      - OXYGEN_BONUS
-      - SAFE_FALL_DISTANCE
-      - SWEEPING_DAMAGE_RATIO
-      - SUBMERGED_MINING_SPEED
-      - MAX_ABSORPTION
-      - SNEAKING_SPEED
-      - LUCK
-
-  Epic:
-    multiplier: 2.2
-    available_attributes:
-      - ATTACK_DAMAGE
-      - ATTACK_SPEED
-      - MINING_EFFICIENCY
-      - BLOCK_BREAK_SPEED
-      - ARMOR
-      - ARMOR_TOUGHNESS
-      - MOVEMENT_SPEED
-      - ATTACK_KNOCKBACK
-      - KNOCKBACK_RESISTANCE
-      - OXYGEN_BONUS
-      - SAFE_FALL_DISTANCE
-      - SWEEPING_DAMAGE_RATIO
-      - SUBMERGED_MINING_SPEED
-      - MAX_ABSORPTION
-      - SNEAKING_SPEED
-      - LUCK
-      - MAX_HEALTH
-      - WATER_MOVEMENT_EFFICIENCY
-      - EXPLOSION_KNOCKBACK_RESISTANCE
-
-  Legendary:
-    multiplier: 3.0
-    available_attributes: "ALL"  # Special value that means all attributes are available
-
-# Quality Ranges Configuration
-# Each tier has a quality range with min, max, and rarity factor
-# Higher rarity factor means higher percentages are rarer
-quality_ranges:
-  Common:
-    min: 1
-    max: 100
-    rarity_factor: 2.3
-  Uncommon:
-    min: 1
-    max: 100
-    rarity_factor: 2.1
-  Rare:
-    min: 1
-    max: 100
-    rarity_factor: 1.7
-  Epic:
-    min: 1
-    max: 100
-    rarity_factor: 1.2
-  Legendary:
-    min: 1
-    max: 100
-    rarity_factor: 1.1
-
-# Tier-Specific Bonuses Configuration
-# Special bonuses that are added to items based on their tier and type
-tier_specific_bonuses:
-  Rare:
-    SWORD:
-      - attribute: LUCK
-        value: 0.2
-    AXE:
-      - attribute: LUCK
-        value: 0.2
-    HELMET:
-      - attribute: WATER_MOVEMENT_EFFICIENCY
-        value: 0.1
-
-  Epic:
-    PICKAXE:
-      - attribute: EXPLOSION_KNOCKBACK_RESISTANCE
-        value: 0.2
-    CHESTPLATE:
-      - attribute: MAX_HEALTH
-        value: 2.0
-
-  Legendary:
-    SWORD:
-      - attribute: SWEEPING_DAMAGE_RATIO
-        value: 0.5
-      - attribute: EXPLOSION_KNOCKBACK_RESISTANCE
-        value: 0.3
-    BOOTS:
-      - attribute: STEP_HEIGHT
-        value: 0.5
-      - attribute: JUMP_STRENGTH
-        value: 0.2
-
-# Item Type Properties Configuration
-# Each item type has a list of base attributes with their values
-# These values will be multiplied by the tier multiplier and quality
-item_types:
-  SWORD:
-    base_attributes:
-      ATTACK_DAMAGE: 6.0
-      ATTACK_SPEED: 1.6
-      ATTACK_KNOCKBACK: 0.5
-      SWEEPING_DAMAGE_RATIO: 0.25
-      ENTITY_INTERACTION_RANGE: 1.0
-
-  AXE:
-    base_attributes:
-      ATTACK_DAMAGE: 5.0
-      ATTACK_SPEED: 1.0
-      ATTACK_KNOCKBACK: 0.8
-      BLOCK_BREAK_SPEED: 1.5
-      ENTITY_INTERACTION_RANGE: 1.0
-
-  PICKAXE:
-    base_attributes:
-      MINING_EFFICIENCY: 2.0
-      BLOCK_BREAK_SPEED: 2.0
-      SUBMERGED_MINING_SPEED: 1.0
-      MOVEMENT_EFFICIENCY: 0.5
-      ENTITY_INTERACTION_RANGE: 1.0
-
-  HELMET:
-    base_attributes:
-      ARMOR: 2.0
-      ARMOR_TOUGHNESS: 1.0
-      OXYGEN_BONUS: 15.0
-      MAX_ABSORPTION: 2.0
-      KNOCKBACK_RESISTANCE: 0.05
-      LUCK: 0.1
-
-  CHESTPLATE:
-    base_attributes:
-      ARMOR: 6.0
-      ARMOR_TOUGHNESS: 2.0
-      MAX_ABSORPTION: 4.0
-      KNOCKBACK_RESISTANCE: 0.1
-      MAX_HEALTH: 2.0
-
-  LEGGINGS:
-    base_attributes:
-      ARMOR: 5.0
-      ARMOR_TOUGHNESS: 2.0
-      MAX_ABSORPTION: 3.0
-      KNOCKBACK_RESISTANCE: 0.05
-      MOVEMENT_SPEED: 0.1
-
-  BOOTS:
-    base_attributes:
-      ARMOR: 2.0
-      ARMOR_TOUGHNESS: 1.0
-      MAX_ABSORPTION: 2.0
-      KNOCKBACK_RESISTANCE: 0.05
-      SNEAKING_SPEED: 0.1
-      SAFE_FALL_DISTANCE: 1.0
-      MOVEMENT_SPEED: 0.1
-
-# Attribute name mappings
-attribute_names:
-  ATTACK_DAMAGE: "Attack Damage"
-  ATTACK_SPEED: "Attack Speed"
-  ATTACK_KNOCKBACK: "Attack Knockback"
-  SWEEPING_DAMAGE_RATIO: "Sweeping Damage Ratio"
-  ENTITY_INTERACTION_RANGE: "Entity Interaction Range"
-  BLOCK_INTERACTION_RANGE: "Block Interaction Range"
-  MINING_EFFICIENCY: "Mining Efficiency"
-  BLOCK_BREAK_SPEED: "Block Break Speed"
-  SUBMERGED_MINING_SPEED: "Submerged Mining Speed"
-  MOVEMENT_EFFICIENCY: "Movement Efficiency"
-  ARMOR: "Armor"
-  ARMOR_TOUGHNESS: "Armor Toughness"
-  OXYGEN_BONUS: "Oxygen Bonus"
-  MAX_ABSORPTION: "Max Absorption"
-  KNOCKBACK_RESISTANCE: "Knockback Resistance"
-  LUCK: "Luck"
-  MAX_HEALTH: "Max Health"
-  SPAWN_REINFORCEMENTS: "Spawn Reinforcements"
-  SNEAKING_SPEED: "Sneaking Speed"
-  SAFE_FALL_DISTANCE: "Safe Fall Distance"
-  MOVEMENT_SPEED: "Movement Speed"
-  STEP_HEIGHT: "Step Height"
-  FALL_DAMAGE_MULTIPLIER: "Fall Damage Multiplier"
-  GRAVITY: "Gravity"
-  JUMP_STRENGTH: "Jump Strength"
-  EXPLOSION_KNOCKBACK_RESISTANCE: "Explosion Knockback Resistance"
-  BURNING_TIME: "Burning Time"
-  SCALE: "Scale"
-  WATER_MOVEMENT_EFFICIENCY: "Water Movement Efficiency"
-
-# Eligible item types for tier assignment
-eligible_items:
-  enabled: true  # Master toggle for tier assignment
-  types:
-    - "SWORD"
-    - "AXE"
-    - "PICKAXE"
-    - "SHOVEL"
-    - "HOE"
-    - "_HELMET"
-    - "_CHESTPLATE"
-    - "_LEGGINGS"
-    - "_BOOTS"
-
-# Quality color settings
-quality_colors:
-  enabled: true  # Master toggle for quality colors
-  colors:
-    95: "<dark_purple><bold>"
-    90: "<light_purple><bold>"
-    80: "<gold><bold>"
-    70: "<yellow>"
-    50: "<green>"
-    30: "<gray>"
-    0: "<dark_gray>"
-  default: "<dark_gray>" 
+# Items that can receive tiers
+tierable-items:
+  tools:
+    - WOODEN_PICKAXE
+    - STONE_PICKAXE
+    - IRON_PICKAXE
+    - GOLDEN_PICKAXE
+    - DIAMOND_PICKAXE
+    - NETHERITE_PICKAXE
+    - WOODEN_AXE
+    - STONE_AXE
+    - IRON_AXE
+    - GOLDEN_AXE
+    - DIAMOND_AXE
+    - NETHERITE_AXE
+    - WOODEN_SHOVEL
+    - STONE_SHOVEL
+    - IRON_SHOVEL
+    - GOLDEN_SHOVEL
+    - DIAMOND_SHOVEL
+    - NETHERITE_SHOVEL
+    - WOODEN_HOE
+    - STONE_HOE
+    - IRON_HOE
+    - GOLDEN_HOE
+    - DIAMOND_HOE
+    - NETHERITE_HOE
+  weapons:
+    - WOODEN_SWORD
+    - STONE_SWORD
+    - IRON_SWORD
+    - GOLDEN_SWORD
+    - DIAMOND_SWORD
+    - NETHERITE_SWORD
+    - BOW
+    - CROSSBOW
+    - TRIDENT
+  armor:
+    - LEATHER_HELMET
+    - LEATHER_CHESTPLATE
+    - LEATHER_LEGGINGS
+    - LEATHER_BOOTS
+    - CHAINMAIL_HELMET
+    - CHAINMAIL_CHESTPLATE
+    - CHAINMAIL_LEGGINGS
+    - CHAINMAIL_BOOTS
+    - IRON_HELMET
+    - IRON_CHESTPLATE
+    - IRON_LEGGINGS
+    - IRON_BOOTS
+    - GOLDEN_HELMET
+    - GOLDEN_CHESTPLATE
+    - GOLDEN_LEGGINGS
+    - GOLDEN_BOOTS
+    - DIAMOND_HELMET
+    - DIAMOND_CHESTPLATE
+    - DIAMOND_LEGGINGS
+    - DIAMOND_BOOTS
+    - NETHERITE_HELMET
+    - NETHERITE_CHESTPLATE
+    - NETHERITE_LEGGINGS
+    - NETHERITE_BOOTS
+    - ELYTRA 
