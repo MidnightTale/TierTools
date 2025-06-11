@@ -17,6 +17,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.*;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.Inventory;
@@ -510,6 +513,21 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
+        // Update clicked item if it has a tier
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem != null && hasTier(clickedItem)) {
+            updateItemLore(clickedItem.getItemMeta());
+            event.setCurrentItem(clickedItem);
+        }
+
+        // Update cursor item if it has a tier
+        ItemStack cursorItem = event.getCursor();
+        if (cursorItem != null && hasTier(cursorItem)) {
+            updateItemLore(cursorItem.getItemMeta());
+            event.setCursor(cursorItem);
+        }
+
+        // Handle crafting/crafting table clicks
         if (event.getInventory().getType() != InventoryType.WORKBENCH
                 && event.getInventory().getType() != InventoryType.CRAFTING) return;
 
@@ -683,6 +701,10 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                 .replace("%tier_tools_quality_color%", qualityColor);
             lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(tierLine));
 
+            // Collect all attribute lines first
+            List<String> allAttributeLines = new ArrayList<>();
+            int totalAttrCount = 0;
+
             // Add regular attributes
             if (meta.getPersistentDataContainer().has(baseValueKey, PersistentDataType.STRING)) {
                 Map<String, Double> baseValues = new Gson().fromJson(
@@ -693,8 +715,6 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                 double tierMultiplier = meta.getPersistentDataContainer().get(tierMultiplierKey, PersistentDataType.DOUBLE);
                 double qualityMultiplier = meta.getPersistentDataContainer().get(qualityMultiplierKey, PersistentDataType.DOUBLE);
 
-                List<String> attributeLines = new ArrayList<>();
-                int attrCount = 0;
                 for (Map.Entry<String, Double> entry : baseValues.entrySet()) {
                     try {
                         NamespacedKey key = NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT));
@@ -704,30 +724,16 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                             String attrLine = attributeLineTemplate
                                 .replace("%tier_tools_attribute_name%", prettifyAttrName(attr))
                                 .replace("%tier_tools_attribute_value%", String.format("%+,.2f", value));
-                            
-                            if (lineSymbolsEnabled) {
-                                String symbol = attrCount == 0 ? lineSymbolStart :
-                                             attrCount == baseValues.size() - 1 ? lineSymbolEnd :
-                                             lineSymbolMiddle;
-                                attrLine = lineSymbolIndent + symbol + " " + attrLine;
-                            }
-                            
-                            attributeLines.add(attrLine);
-                            attrCount++;
+                            allAttributeLines.add(attrLine);
+                            totalAttrCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing attribute for lore: " + entry.getKey());
                     }
                 }
-
-                for (String line : attributeLines) {
-                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(line));
-                }
             }
 
             // Add special attributes
-            List<String> specialLines = new ArrayList<>();
-            int specialCount = 0;
             for (AttributeModifier mod : meta.getAttributeModifiers().values()) {
                 if (mod.getName().startsWith("tier_special_")) {
                     String attrName = mod.getName().substring("tier_special_".length());
@@ -739,16 +745,8 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                                 .replace("%tier_tools_attribute_name%", prettifyAttrName(attr))
                                 .replace("%tier_tools_attribute_value%", String.format("%+,.2f", mod.getAmount()))
                                 .replace("%tier_tools_special_prefix%", "Special");
-                            
-                            if (lineSymbolsEnabled) {
-                                String symbol = specialCount == 0 ? lineSymbolStart :
-                                             specialCount == meta.getAttributeModifiers().size() - 1 ? lineSymbolEnd :
-                                             lineSymbolMiddle;
-                                specialLine = lineSymbolIndent + symbol + " " + specialLine;
-                            }
-                            
-                            specialLines.add(specialLine);
-                            specialCount++;
+                            allAttributeLines.add(specialLine);
+                            totalAttrCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing special attribute for lore: " + attrName);
@@ -756,7 +754,15 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                 }
             }
 
-            for (String line : specialLines) {
+            // Apply line symbols to all attributes
+            for (int i = 0; i < allAttributeLines.size(); i++) {
+                String line = allAttributeLines.get(i);
+                if (lineSymbolsEnabled) {
+                    String symbol = i == 0 ? lineSymbolStart :
+                                 i == allAttributeLines.size() - 1 ? lineSymbolEnd :
+                                 lineSymbolMiddle;
+                    line = lineSymbolIndent + symbol + " " + line;
+                }
                 lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(line));
             }
         } else {
@@ -769,6 +775,10 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
 
             lore.add(miniMessage.deserialize(tierLineTemplate, tierResolver));
 
+            // Collect all attribute lines first
+            List<String> allAttributeLines = new ArrayList<>();
+            int totalAttrCount = 0;
+
             // Add regular attributes
             if (meta.getPersistentDataContainer().has(baseValueKey, PersistentDataType.STRING)) {
                 Map<String, Double> baseValues = new Gson().fromJson(
@@ -779,8 +789,6 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                 double tierMultiplier = meta.getPersistentDataContainer().get(tierMultiplierKey, PersistentDataType.DOUBLE);
                 double qualityMultiplier = meta.getPersistentDataContainer().get(qualityMultiplierKey, PersistentDataType.DOUBLE);
 
-                List<String> attributeLines = new ArrayList<>();
-                int attrCount = 0;
                 for (Map.Entry<String, Double> entry : baseValues.entrySet()) {
                     try {
                         NamespacedKey key = NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT));
@@ -791,31 +799,17 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                                 Placeholder.parsed("attribute_name", prettifyAttrName(attr)),
                                 Placeholder.parsed("attribute_value", String.format("%+,.2f", value))
                             );
-                            
-                            String attrLine = attributeLineTemplate;
-                            if (lineSymbolsEnabled) {
-                                String symbol = attrCount == 0 ? lineSymbolStart :
-                                             attrCount == baseValues.size() - 1 ? lineSymbolEnd :
-                                             lineSymbolMiddle;
-                                attrLine = lineSymbolIndent + symbol + " " + attrLine;
-                            }
-                            
-                            attributeLines.add(miniMessage.serialize(miniMessage.deserialize(attrLine, attrResolver)));
-                            attrCount++;
+                            String attrLine = miniMessage.serialize(miniMessage.deserialize(attributeLineTemplate, attrResolver));
+                            allAttributeLines.add(attrLine);
+                            totalAttrCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing attribute for lore: " + entry.getKey());
                     }
                 }
-
-                for (String line : attributeLines) {
-                    lore.add(miniMessage.deserialize(line));
-                }
             }
 
             // Add special attributes
-            List<String> specialLines = new ArrayList<>();
-            int specialCount = 0;
             for (AttributeModifier mod : Objects.requireNonNull(Objects.requireNonNull(meta.getAttributeModifiers())).values()) {
                 if (mod.getName().startsWith("tier_special_")) {
                     String attrName = mod.getName().substring("tier_special_".length());
@@ -828,17 +822,9 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                                 Placeholder.parsed("attribute_value", String.format("%+,.2f", mod.getAmount())),
                                 Placeholder.parsed("special_prefix", "Special")
                             );
-                            
-                            String specialLine = specialAttributeLineTemplate;
-                            if (lineSymbolsEnabled) {
-                                String symbol = specialCount == 0 ? lineSymbolStart :
-                                             specialCount == meta.getAttributeModifiers().size() - 1 ? lineSymbolEnd :
-                                             lineSymbolMiddle;
-                                specialLine = lineSymbolIndent + symbol + " " + specialLine;
-                            }
-                            
-                            specialLines.add(miniMessage.serialize(miniMessage.deserialize(specialLine, specialResolver)));
-                            specialCount++;
+                            String specialLine = miniMessage.serialize(miniMessage.deserialize(specialAttributeLineTemplate, specialResolver));
+                            allAttributeLines.add(specialLine);
+                            totalAttrCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing special attribute for lore: " + attrName);
@@ -846,7 +832,15 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
                 }
             }
 
-            for (String line : specialLines) {
+            // Apply line symbols to all attributes
+            for (int i = 0; i < allAttributeLines.size(); i++) {
+                String line = allAttributeLines.get(i);
+                if (lineSymbolsEnabled) {
+                    String symbol = i == 0 ? lineSymbolStart :
+                                 i == allAttributeLines.size() - 1 ? lineSymbolEnd :
+                                 lineSymbolMiddle;
+                    line = lineSymbolIndent + symbol + " " + line;
+                }
                 lore.add(miniMessage.deserialize(line));
             }
         }
@@ -1051,12 +1045,92 @@ public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
             loadEligibleItems();
             loadQualityColorSettings();
 
-            sender.sendMessage(Component.text("TierTools configuration reloaded!")
+            // Update all online players' items
+            updateAllPlayersItems();
+
+            sender.sendMessage(Component.text("TierTools configuration reloaded and all items updated!")
                 .color(NamedTextColor.GREEN));
             return true;
         }
 
         return false;
+    }
+
+    private void updateAllPlayersItems() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            updatePlayerItems(player);
+        }
+    }
+
+    private void updatePlayerItems(Player player) {
+        // Update inventory items
+        updateInventoryItems(player.getInventory());
+        
+        // Update armor items
+        updateInventoryItems(player.getInventory().getArmorContents());
+        
+        // Update offhand item
+        ItemStack offhand = player.getInventory().getItemInOffHand();
+        if (hasTier(offhand)) {
+            updateItemLore(offhand.getItemMeta());
+            player.getInventory().setItemInOffHand(offhand);
+        }
+    }
+
+    private void updateInventoryItems(Inventory inventory) {
+        if (inventory == null) return;
+        
+        for (int i = 0; i < inventory.getSize(); i++) {
+            ItemStack item = inventory.getItem(i);
+            if (item != null && hasTier(item)) {
+                updateItemLore(item.getItemMeta());
+                inventory.setItem(i, item);
+            }
+        }
+    }
+
+    private void updateInventoryItems(ItemStack[] items) {
+        if (items == null) return;
+        
+        for (int i = 0; i < items.length; i++) {
+            ItemStack item = items[i];
+            if (item != null && hasTier(item)) {
+                updateItemLore(item.getItemMeta());
+                items[i] = item;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerItemHeld(PlayerItemHeldEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItem(event.getNewSlot());
+        if (item != null && hasTier(item)) {
+            updateItemLore(item.getItemMeta());
+            player.getInventory().setItem(event.getNewSlot(), item);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
+        ItemStack mainHand = event.getMainHandItem();
+        ItemStack offHand = event.getOffHandItem();
+
+        if (mainHand != null && hasTier(mainHand)) {
+            updateItemLore(mainHand.getItemMeta());
+            event.setMainHandItem(mainHand);
+        }
+
+        if (offHand != null && hasTier(offHand)) {
+            updateItemLore(offHand.getItemMeta());
+            event.setOffHandItem(offHand);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        // Update player's items when they join
+        updatePlayerItems(event.getPlayer());
     }
 
 }
