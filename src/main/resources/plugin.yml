@@ -3,6 +3,7 @@ version: '${project.version}'
 main: fun.mntale.tierTools.TierTools
 api-version: '1.20'
 authors: [mntale]
+folia-supported: true
 description: A plugin for managing item tiers and attributes
 commands:
   tiertools:
