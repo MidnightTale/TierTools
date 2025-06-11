@@ -10,7 +10,6 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
-
 public class TierLoreManager {
     private static final NamespacedKey ATTRIBUTE_PREFIX = new NamespacedKey("tiertools", "attribute_");
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
