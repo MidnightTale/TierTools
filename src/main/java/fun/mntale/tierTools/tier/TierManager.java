@@ -66,33 +66,11 @@ public class TierManager {
             return item;
         }
 
-        Tier tier = getRandomTier();
+        Tier tier = TierUtils.getRandomTier();
         if (tier != null) {
             tierData.applyTierData(item, tier);
         }
         return item;
-    }
-
-    private Tier getRandomTier() {
-        if (tiers.isEmpty()) {
-            return null;
-        }
-
-        float totalChance = (float) tiers.values().stream()
-                .mapToDouble(Tier::getChance)
-                .sum();
-
-        float random = new Random().nextFloat() * totalChance;
-        float currentSum = 0;
-
-        for (Tier tier : tiers.values()) {
-            currentSum += tier.getChance();
-            if (random < currentSum) {
-                return tier;
-            }
-        }
-
-        return tiers.values().iterator().next();
     }
 
     public Set<Material> getTierableItems() {

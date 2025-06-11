@@ -7,6 +7,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class TierTools extends JavaPlugin implements Listener {
+    private static TierTools instance;
     private TierManager tierManager;
     private final NamespacedKey tierKey;
 
@@ -16,6 +17,7 @@ public class TierTools extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        instance = this;
         // Save default config if it doesn't exist
         saveDefaultConfig();
         
@@ -34,7 +36,12 @@ public class TierTools extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        instance = null;
         getLogger().info("TierTools has been disabled!");
+    }
+
+    public static TierTools getInstance() {
+        return instance;
     }
 
     public TierManager getTierManager() {

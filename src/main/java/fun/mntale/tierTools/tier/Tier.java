@@ -6,7 +6,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.Random;
 
 public class Tier {
     private final String name;
@@ -16,17 +15,15 @@ public class Tier {
     private final float minQuality;
     private final float maxQuality;
     private final List<String> permissions;
-    private final Random random;
 
     public Tier(ConfigurationSection config) {
         this.name = config.getString("name", "Unknown");
         this.level = config.getInt("level", 1);
-        this.chance = (float) config.getDouble("chance", 100.0);
+        this.chance = (float) config.getDouble("chance", 0.0);
         this.color = config.getString("color", "&f");
         this.minQuality = (float) config.getDouble("min-quality", 0.0);
-        this.maxQuality = (float) config.getDouble("max-quality", 100.0);
+        this.maxQuality = (float) config.getDouble("max-quality", 1.0);
         this.permissions = config.getStringList("permissions");
-        this.random = new Random();
     }
 
     public String getName() {
@@ -58,7 +55,7 @@ public class Tier {
     }
 
     public float generateQuality() {
-        return minQuality + (random.nextFloat() * (maxQuality - minQuality));
+        return TierUtils.generateQuality(minQuality, maxQuality);
     }
 
     public Component getDisplayName() {

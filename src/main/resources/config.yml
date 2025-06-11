@@ -2,46 +2,46 @@ tiers:
   common:
     name: "Common"
     level: 1
-    chance: 50
+    chance: 0.40
     color: "&7"
-    min-quality: 0
-    max-quality: 30
+    min-quality: 0.50
+    max-quality: 0.70
     permissions:
       - "tier.common"
   uncommon:
     name: "Uncommon"
     level: 2
-    chance: 30
+    chance: 0.30
     color: "&a"
-    min-quality: 20
-    max-quality: 50
+    min-quality: 0.60
+    max-quality: 0.80
     permissions:
       - "tier.uncommon"
   rare:
     name: "Rare"
     level: 3
-    chance: 15
+    chance: 0.20
     color: "&9"
-    min-quality: 40
-    max-quality: 70
+    min-quality: 0.70
+    max-quality: 0.90
     permissions:
       - "tier.rare"
   epic:
     name: "Epic"
     level: 4
-    chance: 4
+    chance: 0.08
     color: "&5"
-    min-quality: 60
-    max-quality: 85
+    min-quality: 0.80
+    max-quality: 0.95
     permissions:
       - "tier.epic"
   legendary:
     name: "Legendary"
     level: 5
-    chance: 1
+    chance: 0.02
     color: "&6"
-    min-quality: 80
-    max-quality: 100
+    min-quality: 0.90
+    max-quality: 1.00
     permissions:
       - "tier.legendary"
 
@@ -107,4 +107,112 @@ tierable-items:
     - NETHERITE_CHESTPLATE
     - NETHERITE_LEGGINGS
     - NETHERITE_BOOTS
-    - ELYTRA 
+    - ELYTRA
+
+# Attribute configurations
+attributes:
+  # Global attribute display settings
+  display:
+    color: "&a"  # Color for attribute text
+    format: "+%.1f %s"  # Format: value + name
+    sort-by: "value"  # Sort attributes by: "value" or "name"
+    show-zero: false  # Whether to show attributes with zero value
+
+  # Attribute name mappings (for display)
+  names:
+    attack_damage: "Attack Damage"
+    attack_speed: "Attack Speed"
+    movement_speed: "Movement Speed"
+    armor: "Armor"
+    armor_toughness: "Armor Toughness"
+    knockback_resistance: "Knockback Resistance"
+    max_health: "Max Health"
+    flying_speed: "Flying Speed"
+    follow_range: "Follow Range"
+    attack_knockback: "Attack Knockback"
+    luck: "Luck"
+
+  # Tier-based attributes
+  tiers:
+    common:
+      attack_damage:
+        type: "attack_damage"
+        value: 1.0
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+      movement_speed:
+        type: "movement_speed"
+        value: 0.02
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+
+    uncommon:
+      attack_damage:
+        type: "attack_damage"
+        value: 2.0
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+      movement_speed:
+        type: "movement_speed"
+        value: 0.04
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+
+    rare:
+      attack_damage:
+        type: "attack_damage"
+        value: 3.0
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+      movement_speed:
+        type: "movement_speed"
+        value: 0.06
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+
+    epic:
+      attack_damage:
+        type: "attack_damage"
+        value: 4.0
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+      movement_speed:
+        type: "movement_speed"
+        value: 0.08
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+
+    legendary:
+      attack_damage:
+        type: "attack_damage"
+        value: 5.0
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+      movement_speed:
+        type: "movement_speed"
+        value: 0.10
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+
+  # Item-specific attributes
+  items:
+    DIAMOND_SWORD:
+      attack_damage:
+        type: "attack_damage"
+        value: 2.0
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+    
+    NETHERITE_SWORD:
+      attack_damage:
+        type: "attack_damage"
+        value: 3.0
+        operation: "ADD_NUMBER"
+        slot: "HAND"
+    
+    ELYTRA:
+      movement_speed:
+        type: "movement_speed"
+        value: 0.15
+        operation: "ADD_NUMBER"
+        slot: "CHEST" 
