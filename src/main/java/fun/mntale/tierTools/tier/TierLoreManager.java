@@ -46,6 +46,7 @@ public class TierLoreManager {
         String format = displaySection.getString("format", "<sign><value> <name>");
         String sortBy = displaySection.getString("sort-by", "value");
         boolean showZero = displaySection.getBoolean("show-zero", false);
+        double minDisplayValue = displaySection.getDouble("min-display-value", 0.01); // Minimum value to display
 
         // Get attribute name mappings
         ConfigurationSection namesSection = TierTools.getInstance().getConfig()
@@ -71,7 +72,7 @@ public class TierLoreManager {
                 
                 TierTools.getInstance().getLogger().info("Found matching attribute key: " + key.getKey());
                 Double value = container.get(key, PersistentDataType.DOUBLE);
-                if (value != null && (showZero || value != 0)) {
+                if (value != null && (showZero || value != 0) && Math.abs(value) >= minDisplayValue) {
                     String attrKey = key.getKey().substring("attribute_".length());
                     String displayName = namesSection.getString(attrKey, TierUtils.formatAttributeName(attrKey));
                     attributes.add(new AttributeEntry(attrKey, displayName, value));

@@ -125,6 +125,7 @@ attributes:
     show-zero: false  # Whether to show attributes with zero value
     positive-color: "<color:#00FF00>"  # Color for positive values
     negative-color: "<color:#FF0000>"  # Color for negative values
+    min-display-value: 0.01  # Minimum absolute value to display (values below this will be hidden)
 
   # Attribute name mappings (for display)
   names:
