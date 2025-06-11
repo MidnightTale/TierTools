@@ -34,17 +34,25 @@ public class TierLoreManager {
         }
 
         // Get color thresholds and their corresponding colors
-        Map<Float, String> colorThresholds = new TreeMap<>();
+        TreeMap<Float, String> colorThresholds = new TreeMap<>();
         for (String threshold : qualityColors.getKeys(false)) {
             try {
                 float value = Float.parseFloat(threshold);
                 String color = qualityColors.getString(threshold);
-                if (color != null) {
+                if (color != null && color.startsWith("<color:#")) {
                     colorThresholds.put(value, color);
+                    TierTools.getInstance().getLogger().info("Loaded quality color threshold: " + value + " -> " + color);
+                } else {
+                    TierTools.getInstance().getLogger().warning("Invalid color format for threshold " + threshold + ": " + color);
                 }
             } catch (NumberFormatException e) {
                 TierTools.getInstance().getLogger().warning("Invalid quality threshold: " + threshold);
             }
+        }
+
+        if (colorThresholds.isEmpty()) {
+            TierTools.getInstance().getLogger().warning("No valid quality color thresholds found!");
+            return;
         }
 
         // Calculate interpolated color based on quality
@@ -123,70 +131,34 @@ public class TierLoreManager {
         meta.lore(lore);
     }
 
-    private static String calculateQualityColor(float quality, Map<Float, String> colorThresholds) {
+    private static String calculateQualityColor(float quality, TreeMap<Float, String> colorThresholds) {
         if (colorThresholds.isEmpty()) {
+            TierTools.getInstance().getLogger().warning("No color thresholds available for quality: " + quality);
             return "<color:#FFFFFF>"; // Default white if no colors configured
         }
 
-        // Find the two closest thresholds
-        Float lowerThreshold = null;
-        Float upperThreshold = null;
-        String lowerColor = null;
-        String upperColor = null;
+        // Find the closest threshold
+        Float closestThreshold = null;
+        String closestColor = null;
+        float minDifference = Float.MAX_VALUE;
 
         for (Map.Entry<Float, String> entry : colorThresholds.entrySet()) {
-            if (entry.getKey() <= quality) {
-                if (lowerThreshold == null || entry.getKey() > lowerThreshold) {
-                    lowerThreshold = entry.getKey();
-                    lowerColor = entry.getValue();
-                }
-            } else {
-                if (upperThreshold == null || entry.getKey() < upperThreshold) {
-                    upperThreshold = entry.getKey();
-                    upperColor = entry.getValue();
-                }
+            float difference = Math.abs(entry.getKey() - quality);
+            if (difference < minDifference) {
+                minDifference = difference;
+                closestThreshold = entry.getKey();
+                closestColor = entry.getValue();
             }
         }
 
-        // If quality is below all thresholds, use the lowest threshold color
-        if (lowerThreshold == null) {
-            return colorThresholds.values().iterator().next();
+        if (closestColor != null) {
+            TierTools.getInstance().getLogger().info("Using color for quality " + quality + ": " + closestColor + " (threshold: " + closestThreshold + ")");
+            return closestColor;
         }
 
-        // If quality is above all thresholds, use the highest threshold color
-        if (upperThreshold == null) {
-            return lowerColor;
-        }
-
-        // Calculate interpolation factor
-        float factor = (quality - lowerThreshold) / (upperThreshold - lowerThreshold);
-
-        // Extract RGB values from colors
-        int[] lowerRGB = extractRGB(lowerColor);
-        int[] upperRGB = extractRGB(upperColor);
-
-        // Interpolate RGB values
-        int r = (int) (lowerRGB[0] + (upperRGB[0] - lowerRGB[0]) * factor);
-        int g = (int) (lowerRGB[1] + (upperRGB[1] - lowerRGB[1]) * factor);
-        int b = (int) (lowerRGB[2] + (upperRGB[2] - lowerRGB[2]) * factor);
-
-        return String.format("<color:#%02X%02X%02X>", r, g, b);
-    }
-
-    private static int[] extractRGB(String color) {
-        // Handle different color formats
-        if (color.startsWith("<color:#")) {
-            // Extract hex color
-            String hex = color.substring(8, 14);
-            return new int[] {
-                Integer.parseInt(hex.substring(0, 2), 16),
-                Integer.parseInt(hex.substring(2, 4), 16),
-                Integer.parseInt(hex.substring(4, 6), 16)
-            };
-        } else {
-            // Default to white if color format is not recognized
-            return new int[] { 255, 255, 255 };
-        }
+        // Fallback to white if something goes wrong
+        TierTools.getInstance().getLogger().warning("No color found for quality: " + quality);
+        return "<color:#FFFFFF>";
     }
 
     private record AttributeEntry(String key, String displayName, double value) {}

@@ -120,13 +120,14 @@ lore:
   # Available placeholders: <tier>, <quality>
   tier-format: "<tier> (<quality>%)"
 
+  # Quality color thresholds (0.0 to 1.0)
   quality-colors:
-    "0.0": "<color:#FF0000>"    # Red for 0% quality
-    "0.2": "<color:#FF4500>"    # Orange-red for 20% quality
-    "0.4": "<color:#FFA500>"    # Orange for 40% quality
-    "0.6": "<color:#FFD700>"    # Gold for 60% quality
-    "0.8": "<color:#90EE90>"    # Light green for 80% quality
-    "1.0": "<color:#00FF00>"    # Bright green for 100% quality
+    0.0: "<color:#FF0000>"    # Red for 0% quality
+    0.2: "<color:#FF4500>"    # Orange-red for 20% quality
+    0.4: "<color:#FFA500>"    # Orange for 40% quality
+    0.6: "<color:#FFD700>"    # Gold for 60% quality
+    0.8: "<color:#90EE90>"    # Light green for 80% quality
+    1.0: "<color:#00FF00>"    # Bright green for 100% quality
 
 # Attribute configurations
 attributes:
