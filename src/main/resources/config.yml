@@ -1,3 +1,12 @@
+# Tier List Configuration
+# The order of tiers from lowest to highest
+tier_list:
+  - Common
+  - Uncommon
+  - Rare
+  - Epic
+  - Legendary
+
 # Tier Properties Configuration
 # Each tier has a multiplier and a list of available attributes
 # The multiplier affects the base values of attributes
@@ -75,4 +84,126 @@ tiers:
 
   Legendary:
     multiplier: 3.0
-    available_attributes: "ALL"  # Special value that means all attributes are available 
+    available_attributes: "ALL"  # Special value that means all attributes are available
+
+# Quality Ranges Configuration
+# Each tier has a quality range with min, max, and rarity factor
+# Higher rarity factor means higher percentages are rarer
+quality_ranges:
+  Common:
+    min: 1
+    max: 100
+    rarity_factor: 2.3
+  Uncommon:
+    min: 1
+    max: 100
+    rarity_factor: 2.1
+  Rare:
+    min: 1
+    max: 100
+    rarity_factor: 1.7
+  Epic:
+    min: 1
+    max: 100
+    rarity_factor: 1.2
+  Legendary:
+    min: 1
+    max: 100
+    rarity_factor: 1.1
+
+# Tier-Specific Bonuses Configuration
+# Special bonuses that are added to items based on their tier and type
+tier_specific_bonuses:
+  Rare:
+    SWORD:
+      - attribute: LUCK
+        value: 0.2
+    AXE:
+      - attribute: LUCK
+        value: 0.2
+    HELMET:
+      - attribute: WATER_MOVEMENT_EFFICIENCY
+        value: 0.1
+
+  Epic:
+    PICKAXE:
+      - attribute: EXPLOSION_KNOCKBACK_RESISTANCE
+        value: 0.2
+    CHESTPLATE:
+      - attribute: MAX_HEALTH
+        value: 2.0
+
+  Legendary:
+    SWORD:
+      - attribute: SWEEPING_DAMAGE_RATIO
+        value: 0.5
+      - attribute: EXPLOSION_KNOCKBACK_RESISTANCE
+        value: 0.3
+    BOOTS:
+      - attribute: STEP_HEIGHT
+        value: 0.5
+      - attribute: JUMP_STRENGTH
+        value: 0.2
+
+# Item Type Properties Configuration
+# Each item type has a list of base attributes with their values
+# These values will be multiplied by the tier multiplier and quality
+item_types:
+  SWORD:
+    base_attributes:
+      ATTACK_DAMAGE: 6.0
+      ATTACK_SPEED: 1.6
+      ATTACK_KNOCKBACK: 0.5
+      SWEEPING_DAMAGE_RATIO: 0.25
+      ENTITY_INTERACTION_RANGE: 1.0
+
+  AXE:
+    base_attributes:
+      ATTACK_DAMAGE: 5.0
+      ATTACK_SPEED: 1.0
+      ATTACK_KNOCKBACK: 0.8
+      BLOCK_BREAK_SPEED: 1.5
+      ENTITY_INTERACTION_RANGE: 1.0
+
+  PICKAXE:
+    base_attributes:
+      MINING_EFFICIENCY: 2.0
+      BLOCK_BREAK_SPEED: 2.0
+      SUBMERGED_MINING_SPEED: 1.0
+      MOVEMENT_EFFICIENCY: 0.5
+      ENTITY_INTERACTION_RANGE: 1.0
+
+  HELMET:
+    base_attributes:
+      ARMOR: 2.0
+      ARMOR_TOUGHNESS: 1.0
+      OXYGEN_BONUS: 15.0
+      MAX_ABSORPTION: 2.0
+      KNOCKBACK_RESISTANCE: 0.05
+      LUCK: 0.1
+
+  CHESTPLATE:
+    base_attributes:
+      ARMOR: 6.0
+      ARMOR_TOUGHNESS: 2.0
+      MAX_ABSORPTION: 4.0
+      KNOCKBACK_RESISTANCE: 0.1
+      MAX_HEALTH: 2.0
+
+  LEGGINGS:
+    base_attributes:
+      ARMOR: 5.0
+      ARMOR_TOUGHNESS: 2.0
+      MAX_ABSORPTION: 3.0
+      KNOCKBACK_RESISTANCE: 0.05
+      MOVEMENT_SPEED: 0.1
+
+  BOOTS:
+    base_attributes:
+      ARMOR: 2.0
+      ARMOR_TOUGHNESS: 1.0
+      MAX_ABSORPTION: 2.0
+      KNOCKBACK_RESISTANCE: 0.05
+      SNEAKING_SPEED: 0.1
+      SAFE_FALL_DISTANCE: 1.0
+      MOVEMENT_SPEED: 0.1 

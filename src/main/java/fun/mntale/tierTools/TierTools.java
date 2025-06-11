@@ -35,14 +35,15 @@ import static org.bukkit.attribute.Attribute.*;
 
 public class TierTools extends JavaPlugin implements Listener {
 
-    private final List<String> TIERS = Arrays.asList("Common", "Uncommon", "Rare", "Epic", "Legendary");
+    private final Random random = new Random();
+
+    private List<String> TIERS;
     private final NamespacedKey tierKey = new NamespacedKey(this, "tool_tier");
     private final NamespacedKey qualityKey = new NamespacedKey(this, "tool_quality");
     private final NamespacedKey baseValueKey = new NamespacedKey(this, "tool_base_value");
     private final NamespacedKey tierMultiplierKey = new NamespacedKey(this, "tool_tier_multiplier");
     private final NamespacedKey qualityMultiplierKey = new NamespacedKey(this, "tool_quality_multiplier");
     private final NamespacedKey attributesKey = new NamespacedKey(this, "tool_attributes");
-    private final Random random = new Random();
 
     private static final List<Attribute> ALL_ATTRIBUTES = List.of(
             ATTACK_DAMAGE, ATTACK_SPEED, ATTACK_KNOCKBACK, SWEEPING_DAMAGE_RATIO,
@@ -96,15 +97,174 @@ public class TierTools extends JavaPlugin implements Listener {
     // Define tier-specific attributes and multipliers
     private static final Map<String, TierProperties> TIER_PROPERTIES = new HashMap<>();
 
+    // Define item type specific attributes
+    private static final Map<String, ItemTypeProperties> ITEM_TYPE_PROPERTIES = new HashMap<>();
+
+    // Quality ranges for each tier
+    private static final Map<String, QualityRange> TIER_QUALITY_RANGES = new HashMap<>();
+
+    // Tier-specific bonuses
+    private static final Map<String, Map<String, List<SpecialBonus>>> TIER_SPECIFIC_BONUSES = new HashMap<>();
+
+    private static class SpecialBonus {
+        final Attribute attribute;
+        final double baseValue;
+
+        SpecialBonus(Attribute attribute, double baseValue) {
+            this.attribute = attribute;
+            this.baseValue = baseValue;
+        }
+    }
+
     @Override
     public void onEnable() {
         // Save default config if it doesn't exist
         saveDefaultConfig();
         
+        // Load tier list
+        loadTierList();
+        
         // Load tier properties from config
         loadTierProperties();
         
+        // Load item type properties from config
+        loadItemTypeProperties();
+
+        // Load quality ranges from config
+        loadQualityRanges();
+
+        // Load tier-specific bonuses from config
+        loadTierSpecificBonuses();
+        
         Bukkit.getPluginManager().registerEvents(this, this);
+    }
+
+    private void loadTierList() {
+        List<String> tiers = getConfig().getStringList("tier_list");
+        if (tiers.isEmpty()) {
+            getLogger().warning("No tier list found in config.yml! Using default values.");
+            TIERS = Arrays.asList("Common", "Uncommon", "Rare", "Epic", "Legendary");
+        } else {
+            TIERS = tiers;
+        }
+    }
+
+    private void loadQualityRanges() {
+        TIER_QUALITY_RANGES.clear();
+        
+        ConfigurationSection qualityRangesSection = getConfig().getConfigurationSection("quality_ranges");
+        if (qualityRangesSection == null) {
+            getLogger().warning("No quality ranges configuration found in config.yml! Using default values.");
+            loadDefaultQualityRanges();
+            return;
+        }
+
+        for (String tier : qualityRangesSection.getKeys(false)) {
+            ConfigurationSection tierSection = qualityRangesSection.getConfigurationSection(tier);
+            if (tierSection == null) continue;
+
+            int min = tierSection.getInt("min", 1);
+            int max = tierSection.getInt("max", 100);
+            double rarityFactor = tierSection.getDouble("rarity_factor", 2.0);
+
+            TIER_QUALITY_RANGES.put(tier, new QualityRange(min, max, rarityFactor));
+        }
+
+        // Validate that we have quality ranges for all tiers
+        for (String tier : TIERS) {
+            if (!TIER_QUALITY_RANGES.containsKey(tier)) {
+                getLogger().warning("Missing quality range for tier: " + tier + "! Using default values.");
+                loadDefaultQualityRanges();
+                return;
+            }
+        }
+    }
+
+    private void loadDefaultQualityRanges() {
+        TIER_QUALITY_RANGES.clear();
+        TIER_QUALITY_RANGES.put("Common", new QualityRange(1, 100, 2.3));
+        TIER_QUALITY_RANGES.put("Uncommon", new QualityRange(1, 100, 2.1));
+        TIER_QUALITY_RANGES.put("Rare", new QualityRange(1, 100, 1.7));
+        TIER_QUALITY_RANGES.put("Epic", new QualityRange(1, 100, 1.2));
+        TIER_QUALITY_RANGES.put("Legendary", new QualityRange(1, 100, 1.1));
+    }
+
+    private void loadTierSpecificBonuses() {
+        TIER_SPECIFIC_BONUSES.clear();
+        
+        ConfigurationSection bonusesSection = getConfig().getConfigurationSection("tier_specific_bonuses");
+        if (bonusesSection == null) {
+            getLogger().warning("No tier-specific bonuses configuration found in config.yml! Using default values.");
+            loadDefaultTierSpecificBonuses();
+            return;
+        }
+
+        for (String tier : bonusesSection.getKeys(false)) {
+            ConfigurationSection tierSection = bonusesSection.getConfigurationSection(tier);
+            if (tierSection == null) continue;
+
+            Map<String, List<SpecialBonus>> itemTypeBonuses = new HashMap<>();
+            
+            for (String itemType : tierSection.getKeys(false)) {
+                List<Map<?, ?>> bonusList = tierSection.getMapList(itemType);
+                List<SpecialBonus> bonuses = new ArrayList<>();
+
+                for (Map<?, ?> bonusMap : bonusList) {
+                    try {
+                        String attrName = (String) bonusMap.get("attribute");
+                        double value = ((Number) bonusMap.get("value")).doubleValue();
+                        
+                        NamespacedKey key = NamespacedKey.minecraft(attrName.toLowerCase(Locale.ROOT));
+                        Attribute attr = Registry.ATTRIBUTE.get(key);
+                        
+                        if (attr != null) {
+                            bonuses.add(new SpecialBonus(attr, value));
+                        } else {
+                            getLogger().warning("Invalid attribute name in tier-specific bonus for " + tier + " " + itemType + ": " + attrName);
+                        }
+                    } catch (Exception e) {
+                        getLogger().warning("Invalid tier-specific bonus configuration for " + tier + " " + itemType);
+                    }
+                }
+
+                if (!bonuses.isEmpty()) {
+                    itemTypeBonuses.put(itemType, bonuses);
+                }
+            }
+
+            if (!itemTypeBonuses.isEmpty()) {
+                TIER_SPECIFIC_BONUSES.put(tier, itemTypeBonuses);
+            }
+        }
+    }
+
+    private void loadDefaultTierSpecificBonuses() {
+        TIER_SPECIFIC_BONUSES.clear();
+        
+        // Rare tier bonuses
+        Map<String, List<SpecialBonus>> rareBonuses = new HashMap<>();
+        rareBonuses.put("SWORD", Arrays.asList(new SpecialBonus(LUCK, 0.2)));
+        rareBonuses.put("AXE", Arrays.asList(new SpecialBonus(LUCK, 0.2)));
+        rareBonuses.put("HELMET", Arrays.asList(new SpecialBonus(WATER_MOVEMENT_EFFICIENCY, 0.1)));
+        TIER_SPECIFIC_BONUSES.put("Rare", rareBonuses);
+
+        // Epic tier bonuses
+        Map<String, List<SpecialBonus>> epicBonuses = new HashMap<>();
+        epicBonuses.put("PICKAXE", Arrays.asList(new SpecialBonus(EXPLOSION_KNOCKBACK_RESISTANCE, 0.2)));
+        epicBonuses.put("CHESTPLATE", Arrays.asList(new SpecialBonus(MAX_HEALTH, 2.0)));
+        TIER_SPECIFIC_BONUSES.put("Epic", epicBonuses);
+
+        // Legendary tier bonuses
+        Map<String, List<SpecialBonus>> legendaryBonuses = new HashMap<>();
+        legendaryBonuses.put("SWORD", Arrays.asList(
+            new SpecialBonus(SWEEPING_DAMAGE_RATIO, 0.5),
+            new SpecialBonus(EXPLOSION_KNOCKBACK_RESISTANCE, 0.3)
+        ));
+        legendaryBonuses.put("BOOTS", Arrays.asList(
+            new SpecialBonus(STEP_HEIGHT, 0.5),
+            new SpecialBonus(JUMP_STRENGTH, 0.2)
+        ));
+        TIER_SPECIFIC_BONUSES.put("Legendary", legendaryBonuses);
     }
 
     private void loadTierProperties() {
@@ -196,9 +356,60 @@ public class TierTools extends JavaPlugin implements Listener {
         TIER_PROPERTIES.put("Legendary", new TierProperties(3.0, new ArrayList<>(ALL_ATTRIBUTES)));
     }
 
-    // Define item type specific attributes
-    private static final Map<String, ItemTypeProperties> ITEM_TYPE_PROPERTIES = new HashMap<>();
-    static {
+    private void loadItemTypeProperties() {
+        ITEM_TYPE_PROPERTIES.clear();
+        
+        // Get the item_types section from config
+        ConfigurationSection itemTypesSection = getConfig().getConfigurationSection("item_types");
+        if (itemTypesSection == null) {
+            getLogger().warning("No item types configuration found in config.yml! Using default values.");
+            loadDefaultItemTypeProperties();
+            return;
+        }
+
+        // Load each item type from config
+        for (String itemType : itemTypesSection.getKeys(false)) {
+            ConfigurationSection itemTypeSection = itemTypesSection.getConfigurationSection(itemType);
+            if (itemTypeSection == null) continue;
+
+            ConfigurationSection baseAttrsSection = itemTypeSection.getConfigurationSection("base_attributes");
+            if (baseAttrsSection == null) {
+                getLogger().warning("No base attributes found for item type: " + itemType);
+                continue;
+            }
+
+            List<AttributeMod> baseAttributes = new ArrayList<>();
+            for (String attrName : baseAttrsSection.getKeys(false)) {
+                try {
+                    // Convert attribute name to lowercase and create NamespacedKey
+                    NamespacedKey key = NamespacedKey.minecraft(attrName.toLowerCase(Locale.ROOT));
+                    Attribute attr = Registry.ATTRIBUTE.get(key);
+                    if (attr != null) {
+                        double value = baseAttrsSection.getDouble(attrName);
+                        baseAttributes.add(new AttributeMod(attr, value));
+                    } else {
+                        getLogger().warning("Invalid attribute name in config for item type " + itemType + ": " + attrName);
+                    }
+                } catch (IllegalArgumentException e) {
+                    getLogger().warning("Invalid attribute name in config for item type " + itemType + ": " + attrName);
+                }
+            }
+
+            if (!baseAttributes.isEmpty()) {
+                ITEM_TYPE_PROPERTIES.put(itemType, new ItemTypeProperties(baseAttributes));
+            } else {
+                getLogger().warning("No valid attributes found for item type: " + itemType);
+            }
+        }
+
+        // Validate that we have at least the basic item types
+        if (!ITEM_TYPE_PROPERTIES.containsKey("SWORD") || !ITEM_TYPE_PROPERTIES.containsKey("HELMET")) {
+            getLogger().warning("Missing required item types in config.yml! Using default values.");
+            loadDefaultItemTypeProperties();
+        }
+    }
+
+    private void loadDefaultItemTypeProperties() {
         // Weapons
         ITEM_TYPE_PROPERTIES.put("SWORD", new ItemTypeProperties(Arrays.asList(
             new AttributeMod(ATTACK_DAMAGE, 6.0),
@@ -288,17 +499,6 @@ public class TierTools extends JavaPlugin implements Listener {
             this.attribute = attribute;
             this.baseValue = baseValue;
         }
-    }
-
-    // Quality ranges for each tier
-    private static final Map<String, QualityRange> TIER_QUALITY_RANGES = new HashMap<>();
-    static {
-        // All tiers can get 1-100%, but higher percentages are exponentially rarer
-        TIER_QUALITY_RANGES.put("Common", new QualityRange(1, 100, 2.3));
-        TIER_QUALITY_RANGES.put("Uncommon", new QualityRange(1, 100, 2.1));
-        TIER_QUALITY_RANGES.put("Rare", new QualityRange(1, 100, 1.7));
-        TIER_QUALITY_RANGES.put("Epic", new QualityRange(1, 100, 1.2));
-        TIER_QUALITY_RANGES.put("Legendary", new QualityRange(1, 100, 1.1));
     }
 
     private static class QualityRange {
@@ -575,34 +775,15 @@ public class TierTools extends JavaPlugin implements Listener {
     }
 
     private void addTierSpecificBonuses(ItemMeta meta, List<Component> lore, String tier, String type, double multiplier) {
-        // Add special tier-specific bonuses that aren't part of the base attributes
-        switch (tier) {
-            case "Rare":
-                if (type.contains("SWORD") || type.contains("AXE")) {
-                    addSpecialAttribute(meta, lore, LUCK, 0.2 * multiplier, type);
-                }
-                if (type.endsWith("_HELMET")) {
-                    addSpecialAttribute(meta, lore, WATER_MOVEMENT_EFFICIENCY, 0.1 * multiplier, type);
-                }
-                break;
-            case "Epic":
-                if (type.contains("PICKAXE")) {
-                    addSpecialAttribute(meta, lore, EXPLOSION_KNOCKBACK_RESISTANCE, 0.2 * multiplier, type);
-                }
-                if (type.endsWith("_CHESTPLATE")) {
-                    addSpecialAttribute(meta, lore, MAX_HEALTH, 2.0 * multiplier, type);
-                }
-                break;
-            case "Legendary":
-                if (type.contains("SWORD")) {
-                    addSpecialAttribute(meta, lore, SWEEPING_DAMAGE_RATIO, 0.5 * multiplier, type);
-                    addSpecialAttribute(meta, lore, EXPLOSION_KNOCKBACK_RESISTANCE, 0.3 * multiplier, type);
-                }
-                if (type.endsWith("_BOOTS")) {
-                    addSpecialAttribute(meta, lore, STEP_HEIGHT, 0.5 * multiplier, type);
-                    addSpecialAttribute(meta, lore, JUMP_STRENGTH, 0.2 * multiplier, type);
-                }
-                break;
+        Map<String, List<SpecialBonus>> tierBonuses = TIER_SPECIFIC_BONUSES.get(tier);
+        if (tierBonuses == null) return;
+
+        String itemType = getItemType(type);
+        List<SpecialBonus> bonuses = tierBonuses.get(itemType);
+        if (bonuses == null) return;
+
+        for (SpecialBonus bonus : bonuses) {
+            addSpecialAttribute(meta, lore, bonus.attribute, bonus.baseValue * multiplier, type);
         }
     }
 
