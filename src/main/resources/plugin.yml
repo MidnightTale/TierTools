@@ -4,3 +4,6 @@ main: fun.mntale.tierTools.TierTools
 api-version: '1.21'
 authors: [ MidnightTale_ ]
 website: https://mntale.fun
+folia-supported: true
+depend:
+  - packetevents
