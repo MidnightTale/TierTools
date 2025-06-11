@@ -3,7 +3,6 @@ package fun.mntale.tierTools;
 import com.destroystokyo.paper.loottable.LootableInventory;
 import io.github.retrooper.packetevents.util.folia.FoliaScheduler;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -26,7 +25,8 @@ import com.google.gson.Gson;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.Registry;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -95,7 +95,71 @@ public class TierTools extends JavaPlugin implements Listener {
 
     // Define tier-specific attributes and multipliers
     private static final Map<String, TierProperties> TIER_PROPERTIES = new HashMap<>();
-    static {
+
+    @Override
+    public void onEnable() {
+        // Save default config if it doesn't exist
+        saveDefaultConfig();
+        
+        // Load tier properties from config
+        loadTierProperties();
+        
+        Bukkit.getPluginManager().registerEvents(this, this);
+    }
+
+    private void loadTierProperties() {
+        TIER_PROPERTIES.clear();
+        
+        // Get the tiers section from config
+        ConfigurationSection tiersSection = getConfig().getConfigurationSection("tiers");
+        if (tiersSection == null) {
+            getLogger().warning("No tiers configuration found in config.yml! Using default values.");
+            loadDefaultTierProperties();
+            return;
+        }
+
+        // Load each tier from config
+        for (String tierName : tiersSection.getKeys(false)) {
+            ConfigurationSection tierSection = tiersSection.getConfigurationSection(tierName);
+            if (tierSection == null) continue;
+
+            double multiplier = tierSection.getDouble("multiplier", 1.0);
+            List<Attribute> attributes = new ArrayList<>();
+
+            // Handle special case for Legendary tier with "ALL" attributes
+            if (tierSection.isString("available_attributes") && 
+                tierSection.getString("available_attributes").equals("ALL")) {
+                attributes.addAll(ALL_ATTRIBUTES);
+            } else {
+                // Load individual attributes
+                List<String> attrNames = tierSection.getStringList("available_attributes");
+                for (String attrName : attrNames) {
+                    try {
+                        // Convert attribute name to lowercase and create NamespacedKey
+                        NamespacedKey key = NamespacedKey.minecraft(attrName.toLowerCase(Locale.ROOT));
+                        Attribute attr = Registry.ATTRIBUTE.get(key);
+                        if (attr != null) {
+                            attributes.add(attr);
+                        } else {
+                            getLogger().warning("Invalid attribute name in config: " + attrName);
+                        }
+                    } catch (IllegalArgumentException e) {
+                        getLogger().warning("Invalid attribute name in config: " + attrName);
+                    }
+                }
+            }
+
+            TIER_PROPERTIES.put(tierName, new TierProperties(multiplier, attributes));
+        }
+
+        // Validate that we have at least the basic tiers
+        if (!TIER_PROPERTIES.containsKey("Common") || !TIER_PROPERTIES.containsKey("Legendary")) {
+            getLogger().warning("Missing required tiers in config.yml! Using default values.");
+            loadDefaultTierProperties();
+        }
+    }
+
+    private void loadDefaultTierProperties() {
         // Common tier - Basic attributes only
         TIER_PROPERTIES.put("Common", new TierProperties(1.0, Arrays.asList(
             ATTACK_DAMAGE, ATTACK_SPEED, MINING_EFFICIENCY, BLOCK_BREAK_SPEED,
@@ -257,11 +321,6 @@ public class TierTools extends JavaPlugin implements Listener {
             int quality = (int) Math.round(min + (max - min) * (1 - Math.exp(-x)));
             return Math.min(Math.max(quality, min), max);
         }
-    }
-
-    @Override
-    public void onEnable() {
-        Bukkit.getPluginManager().registerEvents(this, this);
     }
 
     @EventHandler

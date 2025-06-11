@@ -1,0 +1,78 @@
+# Tier Properties Configuration
+# Each tier has a multiplier and a list of available attributes
+# The multiplier affects the base values of attributes
+# Available attributes determine which attributes can appear on items of this tier
+
+tiers:
+  Common:
+    multiplier: 1.0
+    available_attributes:
+      - ATTACK_DAMAGE
+      - ATTACK_SPEED
+      - MINING_EFFICIENCY
+      - BLOCK_BREAK_SPEED
+      - ARMOR
+      - ARMOR_TOUGHNESS
+      - MOVEMENT_SPEED
+
+  Uncommon:
+    multiplier: 1.3
+    available_attributes:
+      - ATTACK_DAMAGE
+      - ATTACK_SPEED
+      - MINING_EFFICIENCY
+      - BLOCK_BREAK_SPEED
+      - ARMOR
+      - ARMOR_TOUGHNESS
+      - MOVEMENT_SPEED
+      - ATTACK_KNOCKBACK
+      - KNOCKBACK_RESISTANCE
+      - OXYGEN_BONUS
+      - SAFE_FALL_DISTANCE
+
+  Rare:
+    multiplier: 1.7
+    available_attributes:
+      - ATTACK_DAMAGE
+      - ATTACK_SPEED
+      - MINING_EFFICIENCY
+      - BLOCK_BREAK_SPEED
+      - ARMOR
+      - ARMOR_TOUGHNESS
+      - MOVEMENT_SPEED
+      - ATTACK_KNOCKBACK
+      - KNOCKBACK_RESISTANCE
+      - OXYGEN_BONUS
+      - SAFE_FALL_DISTANCE
+      - SWEEPING_DAMAGE_RATIO
+      - SUBMERGED_MINING_SPEED
+      - MAX_ABSORPTION
+      - SNEAKING_SPEED
+      - LUCK
+
+  Epic:
+    multiplier: 2.2
+    available_attributes:
+      - ATTACK_DAMAGE
+      - ATTACK_SPEED
+      - MINING_EFFICIENCY
+      - BLOCK_BREAK_SPEED
+      - ARMOR
+      - ARMOR_TOUGHNESS
+      - MOVEMENT_SPEED
+      - ATTACK_KNOCKBACK
+      - KNOCKBACK_RESISTANCE
+      - OXYGEN_BONUS
+      - SAFE_FALL_DISTANCE
+      - SWEEPING_DAMAGE_RATIO
+      - SUBMERGED_MINING_SPEED
+      - MAX_ABSORPTION
+      - SNEAKING_SPEED
+      - LUCK
+      - MAX_HEALTH
+      - WATER_MOVEMENT_EFFICIENCY
+      - EXPLOSION_KNOCKBACK_RESISTANCE
+
+  Legendary:
+    multiplier: 3.0
+    available_attributes: "ALL"  # Special value that means all attributes are available 
