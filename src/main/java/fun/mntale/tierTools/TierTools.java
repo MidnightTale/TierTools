@@ -8,6 +8,9 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -38,7 +41,7 @@ import java.util.stream.Collectors;
 
 import static org.bukkit.attribute.Attribute.*;
 
-public class TierTools extends JavaPlugin implements Listener {
+public class TierTools extends JavaPlugin implements Listener, CommandExecutor {
 
     private final Random random = new Random();
 
@@ -92,6 +95,13 @@ public class TierTools extends JavaPlugin implements Listener {
     private String specialAttributeLineTemplate;
     private Map<Integer, String> qualityColors;
 
+    // Line symbols configuration
+    private boolean lineSymbolsEnabled = true;
+    private String lineSymbolStart = "┝";
+    private String lineSymbolMiddle = "┝";
+    private String lineSymbolEnd = "┖";
+    private String lineSymbolIndent = "  ";
+
     private boolean usePlaceholderAPI = false;
     private MiniMessage miniMessage;
 
@@ -102,18 +112,23 @@ public class TierTools extends JavaPlugin implements Listener {
         
         // Load tier list
         loadTierList();
+        logTierList();
         
         // Load tier properties from config
         loadTierProperties();
+        logTierProperties();
         
         // Load item type properties from config
         loadItemTypeProperties();
+        logItemTypeProperties();
 
         // Load quality ranges from config
         loadQualityRanges();
+        logQualityRanges();
 
         // Load tier-specific bonuses from config
         loadTierSpecificBonuses();
+        logTierSpecificBonuses();
         
         // Load lore templates
         loadLoreTemplates();
@@ -131,14 +146,98 @@ public class TierTools extends JavaPlugin implements Listener {
         
         // Load attribute names
         loadAttributeNames();
+        logAttributeNames();
         
         // Load eligible items
         loadEligibleItems();
         
         // Load quality color settings
         loadQualityColorSettings();
+
+        // Register commands
+        getCommand("tiertools").setExecutor(this);
         
         Bukkit.getPluginManager().registerEvents(this, this);
+    }
+
+    private void logTierList() {
+        getLogger().info("=== Tier List Configuration ===");
+        getLogger().info("Tiers (in order):");
+        for (int i = 0; i < TIERS.size(); i++) {
+            getLogger().info(String.format("  %d. %s", i + 1, TIERS.get(i)));
+        }
+        getLogger().info("============================");
+    }
+
+    private void logTierProperties() {
+        getLogger().info("=== Tier Properties Configuration ===");
+        for (Map.Entry<String, TierProperties> entry : TIER_PROPERTIES.entrySet()) {
+            String tier = entry.getKey();
+            TierProperties props = entry.getValue();
+            getLogger().info(String.format("Tier: %s", tier));
+            getLogger().info(String.format("  Multiplier: %.2f", props.multiplier()));
+            getLogger().info("  Available Attributes:");
+            for (Attribute attr : props.availableAttributes()) {
+                getLogger().info(String.format("    - %s", attr.toString()));
+            }
+        }
+        getLogger().info("===================================");
+    }
+
+    private void logItemTypeProperties() {
+        getLogger().info("=== Item Type Properties Configuration ===");
+        for (Map.Entry<String, ItemTypeProperties> entry : ITEM_TYPE_PROPERTIES.entrySet()) {
+            String type = entry.getKey();
+            ItemTypeProperties props = entry.getValue();
+            getLogger().info(String.format("Item Type: %s", type));
+            getLogger().info("  Base Attributes:");
+            for (AttributeMod mod : props.baseAttributes()) {
+                getLogger().info(String.format("    - %s: %.2f", 
+                    mod.attribute().toString(), mod.baseValue()));
+            }
+        }
+        getLogger().info("=======================================");
+    }
+
+    private void logQualityRanges() {
+        getLogger().info("=== Quality Ranges Configuration ===");
+        for (Map.Entry<String, QualityRange> entry : TIER_QUALITY_RANGES.entrySet()) {
+            String tier = entry.getKey();
+            QualityRange range = entry.getValue();
+            getLogger().info(String.format("Tier: %s", tier));
+            getLogger().info(String.format("  Min Quality: %d", range.min()));
+            getLogger().info(String.format("  Max Quality: %d", range.max()));
+            getLogger().info(String.format("  Rarity Factor: %.2f", range.rarityFactor()));
+        }
+        getLogger().info("=================================");
+    }
+
+    private void logTierSpecificBonuses() {
+        getLogger().info("=== Tier-Specific Bonuses Configuration ===");
+        for (Map.Entry<String, Map<String, List<SpecialBonus>>> tierEntry : TIER_SPECIFIC_BONUSES.entrySet()) {
+            String tier = tierEntry.getKey();
+            getLogger().info(String.format("Tier: %s", tier));
+            
+            for (Map.Entry<String, List<SpecialBonus>> itemEntry : tierEntry.getValue().entrySet()) {
+                String itemType = itemEntry.getKey();
+                getLogger().info(String.format("  Item Type: %s", itemType));
+                
+                for (SpecialBonus bonus : itemEntry.getValue()) {
+                    getLogger().info(String.format("    - %s: %.2f", 
+                        bonus.attribute().toString(), bonus.baseValue()));
+                }
+            }
+        }
+        getLogger().info("========================================");
+    }
+
+    private void logAttributeNames() {
+        getLogger().info("=== Attribute Names Configuration ===");
+        for (Map.Entry<Attribute, String> entry : ATTR_NAMES.entrySet()) {
+            getLogger().info(String.format("%s: %s", 
+                entry.getKey().toString(), entry.getValue()));
+        }
+        getLogger().info("===================================");
     }
 
     private void loadTierList() {
@@ -594,6 +693,8 @@ public class TierTools extends JavaPlugin implements Listener {
                 double tierMultiplier = meta.getPersistentDataContainer().get(tierMultiplierKey, PersistentDataType.DOUBLE);
                 double qualityMultiplier = meta.getPersistentDataContainer().get(qualityMultiplierKey, PersistentDataType.DOUBLE);
 
+                List<String> attributeLines = new ArrayList<>();
+                int attrCount = 0;
                 for (Map.Entry<String, Double> entry : baseValues.entrySet()) {
                     try {
                         NamespacedKey key = NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT));
@@ -603,15 +704,30 @@ public class TierTools extends JavaPlugin implements Listener {
                             String attrLine = attributeLineTemplate
                                 .replace("%tier_tools_attribute_name%", prettifyAttrName(attr))
                                 .replace("%tier_tools_attribute_value%", String.format("%+,.2f", value));
-                            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(attrLine));
+                            
+                            if (lineSymbolsEnabled) {
+                                String symbol = attrCount == 0 ? lineSymbolStart :
+                                             attrCount == baseValues.size() - 1 ? lineSymbolEnd :
+                                             lineSymbolMiddle;
+                                attrLine = lineSymbolIndent + symbol + " " + attrLine;
+                            }
+                            
+                            attributeLines.add(attrLine);
+                            attrCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing attribute for lore: " + entry.getKey());
                     }
                 }
+
+                for (String line : attributeLines) {
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(line));
+                }
             }
 
             // Add special attributes
+            List<String> specialLines = new ArrayList<>();
+            int specialCount = 0;
             for (AttributeModifier mod : meta.getAttributeModifiers().values()) {
                 if (mod.getName().startsWith("tier_special_")) {
                     String attrName = mod.getName().substring("tier_special_".length());
@@ -623,12 +739,25 @@ public class TierTools extends JavaPlugin implements Listener {
                                 .replace("%tier_tools_attribute_name%", prettifyAttrName(attr))
                                 .replace("%tier_tools_attribute_value%", String.format("%+,.2f", mod.getAmount()))
                                 .replace("%tier_tools_special_prefix%", "Special");
-                            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(specialLine));
+                            
+                            if (lineSymbolsEnabled) {
+                                String symbol = specialCount == 0 ? lineSymbolStart :
+                                             specialCount == meta.getAttributeModifiers().size() - 1 ? lineSymbolEnd :
+                                             lineSymbolMiddle;
+                                specialLine = lineSymbolIndent + symbol + " " + specialLine;
+                            }
+                            
+                            specialLines.add(specialLine);
+                            specialCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing special attribute for lore: " + attrName);
                     }
                 }
+            }
+
+            for (String line : specialLines) {
+                lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(line));
             }
         } else {
             // Use MiniMessage format
@@ -650,6 +779,8 @@ public class TierTools extends JavaPlugin implements Listener {
                 double tierMultiplier = meta.getPersistentDataContainer().get(tierMultiplierKey, PersistentDataType.DOUBLE);
                 double qualityMultiplier = meta.getPersistentDataContainer().get(qualityMultiplierKey, PersistentDataType.DOUBLE);
 
+                List<String> attributeLines = new ArrayList<>();
+                int attrCount = 0;
                 for (Map.Entry<String, Double> entry : baseValues.entrySet()) {
                     try {
                         NamespacedKey key = NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT));
@@ -660,15 +791,31 @@ public class TierTools extends JavaPlugin implements Listener {
                                 Placeholder.parsed("attribute_name", prettifyAttrName(attr)),
                                 Placeholder.parsed("attribute_value", String.format("%+,.2f", value))
                             );
-                            lore.add(miniMessage.deserialize(attributeLineTemplate, attrResolver));
+                            
+                            String attrLine = attributeLineTemplate;
+                            if (lineSymbolsEnabled) {
+                                String symbol = attrCount == 0 ? lineSymbolStart :
+                                             attrCount == baseValues.size() - 1 ? lineSymbolEnd :
+                                             lineSymbolMiddle;
+                                attrLine = lineSymbolIndent + symbol + " " + attrLine;
+                            }
+                            
+                            attributeLines.add(miniMessage.serialize(miniMessage.deserialize(attrLine, attrResolver)));
+                            attrCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing attribute for lore: " + entry.getKey());
                     }
                 }
+
+                for (String line : attributeLines) {
+                    lore.add(miniMessage.deserialize(line));
+                }
             }
 
             // Add special attributes
+            List<String> specialLines = new ArrayList<>();
+            int specialCount = 0;
             for (AttributeModifier mod : Objects.requireNonNull(Objects.requireNonNull(meta.getAttributeModifiers())).values()) {
                 if (mod.getName().startsWith("tier_special_")) {
                     String attrName = mod.getName().substring("tier_special_".length());
@@ -681,12 +828,26 @@ public class TierTools extends JavaPlugin implements Listener {
                                 Placeholder.parsed("attribute_value", String.format("%+,.2f", mod.getAmount())),
                                 Placeholder.parsed("special_prefix", "Special")
                             );
-                            lore.add(miniMessage.deserialize(specialAttributeLineTemplate, specialResolver));
+                            
+                            String specialLine = specialAttributeLineTemplate;
+                            if (lineSymbolsEnabled) {
+                                String symbol = specialCount == 0 ? lineSymbolStart :
+                                             specialCount == meta.getAttributeModifiers().size() - 1 ? lineSymbolEnd :
+                                             lineSymbolMiddle;
+                                specialLine = lineSymbolIndent + symbol + " " + specialLine;
+                            }
+                            
+                            specialLines.add(miniMessage.serialize(miniMessage.deserialize(specialLine, specialResolver)));
+                            specialCount++;
                         }
                     } catch (Exception e) {
                         getLogger().warning("Error processing special attribute for lore: " + attrName);
                     }
                 }
+            }
+
+            for (String line : specialLines) {
+                lore.add(miniMessage.deserialize(line));
             }
         }
 
@@ -745,6 +906,24 @@ public class TierTools extends JavaPlugin implements Listener {
             return;
         }
 
+        // Load line symbols configuration
+        ConfigurationSection symbolsSection = loreSection.getConfigurationSection("line_symbols");
+        if (symbolsSection != null) {
+            lineSymbolsEnabled = symbolsSection.getBoolean("enabled", true);
+            ConfigurationSection symbols = symbolsSection.getConfigurationSection("symbols");
+            if (symbols != null) {
+                lineSymbolStart = symbols.getString("start", "┝");
+                lineSymbolMiddle = symbols.getString("middle", "┝");
+                lineSymbolEnd = symbols.getString("end", "┖");
+                lineSymbolIndent = symbols.getString("indent", "  ");
+            }
+            getLogger().info("Line symbols are " + (lineSymbolsEnabled ? "enabled" : "disabled"));
+            if (lineSymbolsEnabled) {
+                getLogger().info(String.format("Line symbols: start='%s', middle='%s', end='%s', indent='%s'",
+                    lineSymbolStart, lineSymbolMiddle, lineSymbolEnd, lineSymbolIndent));
+            }
+        }
+
         // Check if templates use PlaceholderAPI format
         String tierLine = loreSection.getString("tier_line", "");
         usePlaceholderAPI = tierLine.contains("%tier_tools_");
@@ -762,6 +941,8 @@ public class TierTools extends JavaPlugin implements Listener {
         }
 
         qualityColorsEnabled = qualitySection.getBoolean("enabled", true);
+        getLogger().info("Quality colors are " + (qualityColorsEnabled ? "enabled" : "disabled"));
+        
         if (!qualityColorsEnabled) return;
 
         ConfigurationSection colorsSection = qualitySection.getConfigurationSection("colors");
@@ -774,14 +955,18 @@ public class TierTools extends JavaPlugin implements Listener {
         for (String threshold : colorsSection.getKeys(false)) {
             try {
                 int value = Integer.parseInt(threshold);
-                qualityColors.put(value, colorsSection.getString(threshold));
+                String color = colorsSection.getString(threshold);
+                qualityColors.put(value, color);
+                getLogger().info("Loaded quality color for threshold " + value + ": " + color);
             } catch (NumberFormatException e) {
                 getLogger().warning("Invalid quality color threshold: " + threshold);
             }
         }
 
+        String defaultColor = qualitySection.getString("default", "<dark_gray>");
         if (!qualityColors.containsKey(0)) {
-            qualityColors.put(0, qualitySection.getString("default", "<dark_gray>"));
+            qualityColors.put(0, defaultColor);
+            getLogger().info("Using default quality color: " + defaultColor);
         }
     }
 
@@ -825,6 +1010,53 @@ public class TierTools extends JavaPlugin implements Listener {
 
     private String prettifyAttrName(Attribute attr) {
         return ATTR_NAMES.getOrDefault(attr, attr.toString());
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!command.getName().equalsIgnoreCase("tiertools")) return false;
+        
+        if (args.length == 0) {
+            sender.sendMessage(Component.text("TierTools commands:")
+                .color(NamedTextColor.GOLD));
+            sender.sendMessage(Component.text("/tiertools reload - Reload the configuration")
+                .color(NamedTextColor.YELLOW));
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("tiertools.reload")) {
+                sender.sendMessage(Component.text("You don't have permission to use this command!")
+                    .color(NamedTextColor.RED));
+                return true;
+            }
+
+            // Reload config
+            reloadConfig();
+            
+            // Reload all settings
+            loadTierList();
+            logTierList();
+            loadTierProperties();
+            logTierProperties();
+            loadItemTypeProperties();
+            logItemTypeProperties();
+            loadQualityRanges();
+            logQualityRanges();
+            loadTierSpecificBonuses();
+            logTierSpecificBonuses();
+            loadLoreTemplates();
+            loadAttributeNames();
+            logAttributeNames();
+            loadEligibleItems();
+            loadQualityColorSettings();
+
+            sender.sendMessage(Component.text("TierTools configuration reloaded!")
+                .color(NamedTextColor.GREEN));
+            return true;
+        }
+
+        return false;
     }
 
 }

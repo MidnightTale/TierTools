@@ -8,3 +8,18 @@ folia-supported: true
 depend:
   - packetevents
 softdepend: [PlaceholderAPI]
+
+commands:
+  tiertools:
+    description: Main command for TierTools plugin
+    usage: /tiertools [reload]
+    permission: tiertools.admin
+    permission-message: You don't have permission to use this command!
+
+permissions:
+  tiertools.admin:
+    description: Gives access to all TierTools commands
+    default: op
+  tiertools.reload:
+    description: Allows reloading the TierTools configuration
+    default: op

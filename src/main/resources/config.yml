@@ -17,6 +17,15 @@
 #   %tier_tools_attribute_value% - Value of current attribute
 #   %tier_tools_special_prefix% - Prefix for special attributes
 lore_templates:
+  # Line symbols for attribute formatting
+  line_symbols:
+    enabled: true  # Master toggle for line symbols
+    symbols:
+      start: "┝"  # Symbol for the first attribute line
+      middle: "┝"  # Symbol for middle attribute lines
+      end: "┖"    # Symbol for the last attribute line
+      indent: "  " # Indentation before the symbol
+
   # Templates support both MiniMessage and PlaceholderAPI formats
   # MiniMessage format: <gray>Tier: <gold><tier> <quality_color>(<quality>%)
   # PlaceholderAPI format: &7Tier: &6%tier_tools_tier% %tier_tools_quality_color%(%tier_tools_quality%%)
