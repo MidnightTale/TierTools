@@ -70,11 +70,6 @@ public class AttributeManager {
                 List<ItemAttribute> attributes = new ArrayList<>();
                 ConfigurationSection tierSection = tiersSection.getConfigurationSection(tier);
                 if (tierSection != null) {
-                    // Get tier multiplier from tier config
-                    ConfigurationSection tierConfig = plugin.getConfig().getConfigurationSection("tiers." + tier);
-                    double tierMultiplier = tierConfig != null ? tierConfig.getDouble("multiple", 1.0) : 1.0;
-                    plugin.getLogger().info("Loaded multiplier for tier " + tier + ": " + tierMultiplier);
-                    
                     for (String attrKey : tierSection.getKeys(false)) {
                         ConfigurationSection attrSection = tierSection.getConfigurationSection(attrKey);
                         if (attrSection != null) {
@@ -84,9 +79,8 @@ public class AttributeManager {
                             if (type != null) {
                                 Attribute attribute = getAttributeByKey(type);
                                 if (attribute != null) {
-                                    // Apply tier multiplier to min and max values
-                                    attributes.add(new ItemAttribute(attribute, minValue * tierMultiplier, maxValue * tierMultiplier, attrKey));
-                                    plugin.getLogger().info("Loaded attribute for tier " + tier + ": " + type + " = " + (minValue * tierMultiplier) + "-" + (maxValue * tierMultiplier));
+                                    attributes.add(new ItemAttribute(attribute, minValue, maxValue, attrKey));
+                                    plugin.getLogger().info("Loaded attribute for tier " + tier + ": " + type + " = " + minValue + "-" + maxValue);
                                 } else {
                                     plugin.getLogger().warning("Invalid attribute type in config: " + type);
                                 }

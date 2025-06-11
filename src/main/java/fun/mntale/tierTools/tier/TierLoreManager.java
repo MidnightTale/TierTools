@@ -25,49 +25,12 @@ public class TierLoreManager {
             return;
         }
 
-        // Get quality color settings
-        ConfigurationSection qualityColors = loreSection.getConfigurationSection("quality-colors");
-        if (qualityColors == null) {
-            TierTools.getInstance().getLogger().warning("No quality color settings found in config!");
-            return;
-        }
-
-        // Get color thresholds and their corresponding colors
-        TreeMap<Float, String> colorThresholds = new TreeMap<>();
-        for (String threshold : qualityColors.getKeys(false)) {
-            try {
-                float value = Float.parseFloat(threshold);
-                String color = qualityColors.getString(threshold);
-                if (color != null && color.startsWith("<color:#")) {
-                    colorThresholds.put(value, color);
-                    TierTools.getInstance().getLogger().info("Loaded quality color threshold: " + value + " -> " + color);
-                } else {
-                    TierTools.getInstance().getLogger().warning("Invalid color format for threshold " + threshold + ": " + color);
-                }
-            } catch (NumberFormatException e) {
-                TierTools.getInstance().getLogger().warning("Invalid quality threshold: " + threshold);
-            }
-        }
-
-        if (colorThresholds.isEmpty()) {
-            TierTools.getInstance().getLogger().warning("No valid quality color thresholds found!");
-            return;
-        }
-
-        // Calculate interpolated color based on quality
-        String qualityColor = calculateQualityColor(quality, colorThresholds);
-        TierTools.getInstance().getLogger().info("Quality: " + quality + ", Color: " + qualityColor);
-
         // Add tier and quality information
-        String tierFormat = loreSection.getString("tier-format", "<tier> (<quality>%)");
-        String qualityText = String.format("%.2f", quality * 100);
+        String tierFormat = loreSection.getString("tier-format", "<color:#FFD700><tier> (<quality>%)</color>");
         String tierText = tierFormat
             .replace("<tier>", tier.getName())
-            .replace("<quality>", qualityColor + qualityText + "</color>");
-        
-        // Use tier color directly from config (should be in MiniMessage format)
-        String tierColor = tier.getColor();
-        lore.add(MINI_MESSAGE.deserialize(tierColor + tierText));
+            .replace("<quality>", String.format("%.2f", quality * 100));
+        lore.add(MINI_MESSAGE.deserialize(tierText));
         
         // Get attribute display settings from config
         ConfigurationSection displaySection = TierTools.getInstance().getConfig()
@@ -82,7 +45,7 @@ public class TierLoreManager {
         String format = displaySection.getString("format", "<sign><value> <name>");
         String sortBy = displaySection.getString("sort-by", "value");
         boolean showZero = displaySection.getBoolean("show-zero", false);
-        double minDisplayValue = displaySection.getDouble("min-display-value", 0.01);
+        double minDisplayValue = displaySection.getDouble("min-display-value", 0.01); // Minimum value to display
 
         // Get attribute name mappings
         ConfigurationSection namesSection = TierTools.getInstance().getConfig()
@@ -96,15 +59,25 @@ public class TierLoreManager {
         List<AttributeEntry> attributes = new ArrayList<>();
         PersistentDataContainer container = meta.getPersistentDataContainer();
         
+        TierTools.getInstance().getLogger().info("Reading attributes from " + meta.displayName());
+        TierTools.getInstance().getLogger().info("Container has " + container.getKeys().size() + " keys");
+        TierTools.getInstance().getLogger().info("Looking for attributes with prefix: " + ATTRIBUTE_PREFIX.getNamespace() + ":attribute_");
+        
         for (NamespacedKey key : container.getKeys()) {
+            TierTools.getInstance().getLogger().info("Found key: " + key.getNamespace() + ":" + key.getKey());
+            // Check if the key is in our namespace and starts with "attribute_"
             if (key.getNamespace().equals(ATTRIBUTE_PREFIX.getNamespace()) && 
                 key.getKey().startsWith("attribute_")) {
                 
+                TierTools.getInstance().getLogger().info("Found matching attribute key: " + key.getKey());
                 Double value = container.get(key, PersistentDataType.DOUBLE);
                 if (value != null && (showZero || value != 0) && Math.abs(value) >= minDisplayValue) {
                     String attrKey = key.getKey().substring("attribute_".length());
                     String displayName = namesSection.getString(attrKey, TierUtils.formatAttributeName(attrKey));
                     attributes.add(new AttributeEntry(attrKey, displayName, value));
+                    TierTools.getInstance().getLogger().info("Found attribute: " + attrKey + " = " + value);
+                } else {
+                    TierTools.getInstance().getLogger().info("Attribute value is null or zero: " + value);
                 }
             }
         }
@@ -125,39 +98,11 @@ public class TierLoreManager {
                 .replace("<value>", String.format("%.2f", Math.abs(entry.value())))
                 .replace("<name>", entry.displayName());
             lore.add(MINI_MESSAGE.deserialize(color + formattedText));
+            TierTools.getInstance().getLogger().info("Added to lore: " + formattedText);
         }
         
         meta.lore(lore);
-    }
-
-    private static String calculateQualityColor(float quality, TreeMap<Float, String> colorThresholds) {
-        if (colorThresholds.isEmpty()) {
-            TierTools.getInstance().getLogger().warning("No color thresholds available for quality: " + quality);
-            return "<color:#FFFFFF>"; // Default white if no colors configured
-        }
-
-        // Find the closest threshold
-        Float closestThreshold = null;
-        String closestColor = null;
-        float minDifference = Float.MAX_VALUE;
-
-        for (Map.Entry<Float, String> entry : colorThresholds.entrySet()) {
-            float difference = Math.abs(entry.getKey() - quality);
-            if (difference < minDifference) {
-                minDifference = difference;
-                closestThreshold = entry.getKey();
-                closestColor = entry.getValue();
-            }
-        }
-
-        if (closestColor != null) {
-            TierTools.getInstance().getLogger().info("Using color for quality " + quality + ": " + closestColor + " (threshold: " + closestThreshold + ")");
-            return closestColor;
-        }
-
-        // Fallback to white if something goes wrong
-        TierTools.getInstance().getLogger().warning("No color found for quality: " + quality);
-        return "<color:#FFFFFF>";
+        TierTools.getInstance().getLogger().info("Applied lore with " + attributes.size() + " attributes");
     }
 
     private record AttributeEntry(String key, String displayName, double value) {}
