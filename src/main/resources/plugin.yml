@@ -1,5 +1,5 @@
 name: TierTools
-version: '${project.version}'
+version: '${version}'
 main: fun.mntale.tierTools.TierTools
 api-version: '1.20'
 authors: [mntale]
