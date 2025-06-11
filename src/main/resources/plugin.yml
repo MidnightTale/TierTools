@@ -1,10 +1,35 @@
 name: TierTools
-version: '1.0-SNAPSHOT'
+version: '${project.version}'
 main: fun.mntale.tierTools.TierTools
-api-version: '1.21'
-authors: [ MidnightTale_ ]
-website: https://mntale.fun
-folia-supported: true
-depend:
-  - packetevents
-softdepend: [PlaceholderAPI]
+api-version: '1.20'
+authors: [mntale]
+description: A plugin for managing item tiers and attributes
+commands:
+  tiertools:
+    description: Main command for TierTools plugin
+    usage: /<command> [reload]
+    aliases: [tt]
+    permission: tiertools.admin
+    permission-message: You don't have permission to use this command!
+permissions:
+  tiertools.admin:
+    description: Gives access to all TierTools commands
+    default: op
+  tiertools.reload:
+    description: Allows reloading the plugin configuration
+    default: op
+  tier.common:
+    description: Allows using common tier items
+    default: true
+  tier.uncommon:
+    description: Allows using uncommon tier items
+    default: true
+  tier.rare:
+    description: Allows using rare tier items
+    default: true
+  tier.epic:
+    description: Allows using epic tier items
+    default: true
+  tier.legendary:
+    description: Allows using legendary tier items
+    default: true

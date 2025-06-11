@@ -33,6 +33,18 @@ public class AttributeManager {
         loadConfig();
     }
 
+    public void reloadConfig() {
+        // Clear existing data
+        tierableItems.clear();
+        tierAttributes.clear();
+        itemAttributes.clear();
+        
+        // Reload configuration
+        loadConfig();
+        
+        plugin.getLogger().info("AttributeManager configuration reloaded");
+    }
+
     private void loadConfig() {
         // Load tierable items
         ConfigurationSection tierableSection = plugin.getConfig().getConfigurationSection("tierable-items");
