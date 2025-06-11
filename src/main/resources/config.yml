@@ -109,12 +109,18 @@ tierable-items:
     - NETHERITE_BOOTS
     - ELYTRA
 
+# Lore format settings
+lore:
+  # Format for tier and quality display
+  # Available placeholders: <tier>, <quality>
+  tier-format: "<color:#FFD700><tier> (<quality>%)</color>"
+
 # Attribute configurations
 attributes:
   # Global attribute display settings
   display:
-    color: "&a"  # Color for attribute text
-    format: "+%.1f %s"  # Format: value + name
+    color: "<color:#00FF00>"  # Color for attribute text
+    format: "+<value> <name>"  # Format: value + name
     sort-by: "value"  # Sort attributes by: "value" or "name"
     show-zero: false  # Whether to show attributes with zero value
 
@@ -138,61 +144,41 @@ attributes:
       attack_damage:
         type: "attack_damage"
         value: 1.0
-        operation: "ADD_NUMBER"
-        slot: "HAND"
       movement_speed:
         type: "movement_speed"
         value: 0.02
-        operation: "ADD_NUMBER"
-        slot: "HAND"
 
     uncommon:
       attack_damage:
         type: "attack_damage"
         value: 2.0
-        operation: "ADD_NUMBER"
-        slot: "HAND"
       movement_speed:
         type: "movement_speed"
         value: 0.04
-        operation: "ADD_NUMBER"
-        slot: "HAND"
 
     rare:
       attack_damage:
         type: "attack_damage"
         value: 3.0
-        operation: "ADD_NUMBER"
-        slot: "HAND"
       movement_speed:
         type: "movement_speed"
         value: 0.06
-        operation: "ADD_NUMBER"
-        slot: "HAND"
 
     epic:
       attack_damage:
         type: "attack_damage"
         value: 4.0
-        operation: "ADD_NUMBER"
-        slot: "HAND"
       movement_speed:
         type: "movement_speed"
         value: 0.08
-        operation: "ADD_NUMBER"
-        slot: "HAND"
 
     legendary:
       attack_damage:
         type: "attack_damage"
         value: 5.0
-        operation: "ADD_NUMBER"
-        slot: "HAND"
       movement_speed:
         type: "movement_speed"
         value: 0.10
-        operation: "ADD_NUMBER"
-        slot: "HAND"
 
   # Item-specific attributes
   items:
@@ -200,19 +186,13 @@ attributes:
       attack_damage:
         type: "attack_damage"
         value: 2.0
-        operation: "ADD_NUMBER"
-        slot: "HAND"
     
     NETHERITE_SWORD:
       attack_damage:
         type: "attack_damage"
         value: 3.0
-        operation: "ADD_NUMBER"
-        slot: "HAND"
     
     ELYTRA:
       movement_speed:
         type: "movement_speed"
         value: 0.15
-        operation: "ADD_NUMBER"
-        slot: "CHEST" 

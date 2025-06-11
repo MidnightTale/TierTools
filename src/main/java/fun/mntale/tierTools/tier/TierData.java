@@ -8,6 +8,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.configuration.ConfigurationSection;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +70,11 @@ public class TierData {
         float quality = tier.generateQuality();
         container.set(qualityKey, PersistentDataType.FLOAT, quality);
 
+        // Set display name with tier color
+        String itemName = item.getType().name().toLowerCase().replace("_", " ");
+        String displayName = tier.getColor() + itemName;
+        meta.displayName(MiniMessage.miniMessage().deserialize(displayName));
+
         // Apply attributes based on tier and quality
         attributeManager.applyAttributes(item, tier.getName().toLowerCase(), quality);
 
@@ -76,6 +82,18 @@ public class TierData {
         meta = item.getItemMeta();
         if (meta == null) {
             return;
+        }
+
+        // Copy the PersistentDataContainer data to the new meta
+        PersistentDataContainer newContainer = meta.getPersistentDataContainer();
+        for (NamespacedKey key : container.getKeys()) {
+            if (container.has(key, PersistentDataType.DOUBLE)) {
+                newContainer.set(key, PersistentDataType.DOUBLE, container.get(key, PersistentDataType.DOUBLE));
+            } else if (container.has(key, PersistentDataType.FLOAT)) {
+                newContainer.set(key, PersistentDataType.FLOAT, container.get(key, PersistentDataType.FLOAT));
+            } else if (container.has(key, PersistentDataType.STRING)) {
+                newContainer.set(key, PersistentDataType.STRING, container.get(key, PersistentDataType.STRING));
+            }
         }
 
         // Apply lore using TierLoreManager after attributes are applied
