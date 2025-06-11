@@ -41,8 +41,9 @@ public class TierLoreManager {
             return;
         }
 
-        String color = displaySection.getString("color", "<color:#00FF00>");
-        String format = displaySection.getString("format", "+<value> <name>");
+        String positiveColor = displaySection.getString("positive-color", "<color:#00FF00>");
+        String negativeColor = displaySection.getString("negative-color", "<color:#FF0000>");
+        String format = displaySection.getString("format", "<sign><value> <name>");
         String sortBy = displaySection.getString("sort-by", "value");
         boolean showZero = displaySection.getBoolean("show-zero", false);
 
@@ -90,8 +91,11 @@ public class TierLoreManager {
 
         // Add attributes to lore
         for (AttributeEntry entry : attributes) {
+            String sign = entry.value() >= 0 ? "+" : "";
+            String color = entry.value() >= 0 ? positiveColor : negativeColor;
             String formattedText = format
-                .replace("<value>", String.format("%.2f", entry.value()))
+                .replace("<sign>", sign)
+                .replace("<value>", String.format("%.2f", Math.abs(entry.value())))
                 .replace("<name>", entry.displayName());
             lore.add(MINI_MESSAGE.deserialize(color + formattedText));
             TierTools.getInstance().getLogger().info("Added to lore: " + formattedText);

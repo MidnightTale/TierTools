@@ -6,16 +6,20 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.Registry;
+import java.util.Random;
 
 public class ItemAttribute {
     private final Attribute attribute;
-    private final double value;
-    private final String name;
+    private final double minValue;
+    private final double maxValue;
+    private final String key;
+    private static final Random random = new Random();
 
-    public ItemAttribute(Attribute attribute, double value, String name) {
+    public ItemAttribute(Attribute attribute, double minValue, double maxValue, String key) {
         this.attribute = attribute;
-        this.value = value;
-        this.name = name;
+        this.minValue = minValue;
+        this.maxValue = maxValue;
+        this.key = key;
     }
 
     public void applyAttribute(ItemStack item, float quality) {
@@ -24,7 +28,7 @@ public class ItemAttribute {
         }
 
         ItemMeta meta = item.getItemMeta();
-        double scaledValue = value * quality;
+        double scaledValue = getRandomValue() * quality;
         
         AttributeModifier modifier = new AttributeModifier(
             new NamespacedKey("tiertools", "attribute_" + attribute.getKey().getKey()),
@@ -41,12 +45,20 @@ public class ItemAttribute {
         return attribute;
     }
 
-    public double getValue() {
-        return value;
+    public double getMinValue() {
+        return minValue;
     }
 
-    public String getName() {
-        return name;
+    public double getMaxValue() {
+        return maxValue;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public double getRandomValue() {
+        return minValue + (random.nextDouble() * (maxValue - minValue));
     }
 
     /**

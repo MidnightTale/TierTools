@@ -62,12 +62,13 @@ public class AttributeManager {
                         ConfigurationSection attrSection = tierSection.getConfigurationSection(attrKey);
                         if (attrSection != null) {
                             String type = attrSection.getString("type");
-                            double value = attrSection.getDouble("value");
+                            double minValue = attrSection.getDouble("min_value");
+                            double maxValue = attrSection.getDouble("max_value");
                             if (type != null) {
                                 Attribute attribute = getAttributeByKey(type);
                                 if (attribute != null) {
-                                    attributes.add(new ItemAttribute(attribute, value, attrKey));
-                                    plugin.getLogger().info("Loaded attribute for tier " + tier + ": " + type + " = " + value);
+                                    attributes.add(new ItemAttribute(attribute, minValue, maxValue, attrKey));
+                                    plugin.getLogger().info("Loaded attribute for tier " + tier + ": " + type + " = " + minValue + "-" + maxValue);
                                 } else {
                                     plugin.getLogger().warning("Invalid attribute type in config: " + type);
                                 }
@@ -95,12 +96,13 @@ public class AttributeManager {
                             ConfigurationSection attrSection = itemSection.getConfigurationSection(attrKey);
                             if (attrSection != null) {
                                 String type = attrSection.getString("type");
-                                double value = attrSection.getDouble("value");
+                                double minValue = attrSection.getDouble("min_value");
+                                double maxValue = attrSection.getDouble("max_value");
                                 if (type != null) {
                                     Attribute attribute = getAttributeByKey(type);
                                     if (attribute != null) {
-                                        attributes.add(new ItemAttribute(attribute, value, attrKey));
-                                        plugin.getLogger().info("Loaded attribute for item " + itemKey + ": " + type + " = " + value);
+                                        attributes.add(new ItemAttribute(attribute, minValue, maxValue, attrKey));
+                                        plugin.getLogger().info("Loaded attribute for item " + itemKey + ": " + type + " = " + minValue + "-" + maxValue);
                                     } else {
                                         plugin.getLogger().warning("Invalid attribute type in config: " + type);
                                     }
@@ -144,15 +146,19 @@ public class AttributeManager {
     }
 
     private double applyQualityEffect(double baseValue, float quality) {
-        // Quality affects the value in a non-linear way
-        // At quality 0.3 or higher: value scales from 0 to baseValue
-        // At quality below 0.3: value can go negative
+        // Quality affects the value in an exponential way
+        // At quality 0.3 or higher: value scales exponentially from 0 to baseValue
+        // At quality below 0.3: value can go negative with exponential scaling
         if (quality >= 0.3f) {
-            // Scale from 0 to baseValue between 0.3 and 1.0
-            return baseValue * ((quality - 0.3f) / 0.7f);
+            // Exponential scale from 0 to baseValue between 0.3 and 1.0
+            // Using power of 2 for exponential growth
+            double normalizedQuality = (quality - 0.3f) / 0.7f;
+            return baseValue * Math.pow(normalizedQuality, 2);
         } else {
-            // Scale from -baseValue to 0 between 0.0 and 0.3
-            return baseValue * ((quality - 0.3f) / 0.3f);
+            // Exponential scale from -baseValue to 0 between 0.0 and 0.3
+            // Using power of 2 for exponential growth
+            double normalizedQuality = (quality - 0.3f) / 0.3f;
+            return baseValue * Math.pow(normalizedQuality, 2);
         }
     }
 
@@ -204,8 +210,9 @@ public class AttributeManager {
         ItemMeta meta = item.getItemMeta();
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
-        // Map to store combined attributes
+        // Map to store combined attributes and their counts for averaging
         Map<Attribute, Double> combinedAttributes = new HashMap<>();
+        Map<Attribute, Integer> attributeCounts = new HashMap<>();
 
         // Step 2: Apply tier-based attributes
         List<ItemAttribute> tierAttrs = tierAttributes.get(tierName);
@@ -213,9 +220,11 @@ public class AttributeManager {
             plugin.getLogger().info("Applying tier-based attributes for " + item.getType() + " with tier " + tierName);
             List<ItemAttribute> selectedAttrs = selectRandomAttributes(tierAttrs, quality, tierName);
             for (ItemAttribute attr : selectedAttrs) {
-                double value = applyQualityEffect(attr.getValue(), quality);
-                combinedAttributes.put(attr.getAttribute(), value);
-                plugin.getLogger().info("  - " + attr.getAttribute().getKey().getKey() + ": " + value);
+                double baseValue = attr.getRandomValue();
+                double value = applyQualityEffect(baseValue, quality);
+                combinedAttributes.merge(attr.getAttribute(), value, Double::sum);
+                attributeCounts.merge(attr.getAttribute(), 1, Integer::sum);
+                plugin.getLogger().info("  - Tier attribute: " + attr.getAttribute().getKey().getKey() + ": " + value);
             }
         }
 
@@ -225,11 +234,22 @@ public class AttributeManager {
             plugin.getLogger().info("Applying item-specific attributes for " + item.getType());
             List<ItemAttribute> selectedAttrs = selectRandomAttributes(itemAttrs, quality, tierName);
             for (ItemAttribute attr : selectedAttrs) {
-                double value = applyQualityEffect(attr.getValue(), quality);
-                // If attribute already exists, take the higher value
-                combinedAttributes.merge(attr.getAttribute(), value, Math::max);
-                plugin.getLogger().info("  - " + attr.getAttribute().getKey().getKey() + ": " + value);
+                double baseValue = attr.getRandomValue();
+                double value = applyQualityEffect(baseValue, quality);
+                combinedAttributes.merge(attr.getAttribute(), value, Double::sum);
+                attributeCounts.merge(attr.getAttribute(), 1, Integer::sum);
+                plugin.getLogger().info("  - Item attribute: " + attr.getAttribute().getKey().getKey() + ": " + value);
             }
+        }
+
+        // Calculate averages for attributes that appear in both tier and item
+        for (Map.Entry<Attribute, Double> entry : combinedAttributes.entrySet()) {
+            Attribute attribute = entry.getKey();
+            double totalValue = entry.getValue();
+            int count = attributeCounts.get(attribute);
+            double averageValue = totalValue / count;
+            combinedAttributes.put(attribute, averageValue);
+            plugin.getLogger().info("Final average for " + attribute.getKey().getKey() + ": " + averageValue + " (from " + count + " sources)");
         }
 
         // Apply combined attributes

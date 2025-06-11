@@ -120,9 +120,11 @@ attributes:
   # Global attribute display settings
   display:
     color: "<color:#00FF00>"  # Color for attribute text
-    format: "+<value> <name>"  # Format: value + name
+    format: "<sign><value> <name>"  # Format: sign + value + name (sign will be + or -)
     sort-by: "value"  # Sort attributes by: "value" or "name"
     show-zero: false  # Whether to show attributes with zero value
+    positive-color: "<color:#00FF00>"  # Color for positive values
+    negative-color: "<color:#FF0000>"  # Color for negative values
 
   # Attribute name mappings (for display)
   names:
@@ -143,56 +145,69 @@ attributes:
     common:
       attack_damage:
         type: "attack_damage"
-        value: 1.0
+        min_value: 0.5
+        max_value: 1.5
       movement_speed:
         type: "movement_speed"
-        value: 0.02
+        min_value: 0.01
+        max_value: 0.03
 
     uncommon:
       attack_damage:
         type: "attack_damage"
-        value: 2.0
+        min_value: 1.5
+        max_value: 2.5
       movement_speed:
         type: "movement_speed"
-        value: 0.04
+        min_value: 0.03
+        max_value: 0.05
 
     rare:
       attack_damage:
         type: "attack_damage"
-        value: 3.0
+        min_value: 2.5
+        max_value: 3.5
       movement_speed:
         type: "movement_speed"
-        value: 0.06
+        min_value: 0.05
+        max_value: 0.07
 
     epic:
       attack_damage:
         type: "attack_damage"
-        value: 4.0
+        min_value: 3.5
+        max_value: 4.5
       movement_speed:
         type: "movement_speed"
-        value: 0.08
+        min_value: 0.07
+        max_value: 0.09
 
     legendary:
       attack_damage:
         type: "attack_damage"
-        value: 5.0
+        min_value: 4.5
+        max_value: 5.5
       movement_speed:
         type: "movement_speed"
-        value: 0.10
+        min_value: 0.09
+        max_value: 0.11
 
   # Item-specific attributes
   items:
     DIAMOND_SWORD:
       attack_damage:
         type: "attack_damage"
-        value: 2.0
+        min_value: 1.5
+        max_value: 2.5
     
     NETHERITE_SWORD:
       attack_damage:
         type: "attack_damage"
-        value: 3.0
+        min_value: 2.5
+        max_value: 3.5
     
     ELYTRA:
       movement_speed:
         type: "movement_speed"
-        value: 0.15
+        min_value: 0.12
+        max_value: 0.18
