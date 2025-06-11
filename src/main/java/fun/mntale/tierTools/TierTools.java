@@ -22,11 +22,16 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.Registry;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -57,42 +62,10 @@ public class TierTools extends JavaPlugin implements Listener {
     );
 
     // Prettified names lookup map
-    private static final Map<Attribute, String> ATTR_NAMES = new HashMap<>();
-    static {
-        ATTR_NAMES.put(ATTACK_DAMAGE, "Attack Damage");
-        ATTR_NAMES.put(ATTACK_SPEED, "Attack Speed");
-        ATTR_NAMES.put(ATTACK_KNOCKBACK, "Attack Knockback");
-        ATTR_NAMES.put(SWEEPING_DAMAGE_RATIO, "Sweeping Damage Ratio");
-        ATTR_NAMES.put(ENTITY_INTERACTION_RANGE, "Entity Interaction Range");
-        ATTR_NAMES.put(BLOCK_INTERACTION_RANGE, "Block Interaction Range");
-        ATTR_NAMES.put(MINING_EFFICIENCY, "Mining Efficiency");
-        ATTR_NAMES.put(BLOCK_BREAK_SPEED, "Block Break Speed");
-        ATTR_NAMES.put(SUBMERGED_MINING_SPEED, "Submerged Mining Speed");
-        ATTR_NAMES.put(MOVEMENT_EFFICIENCY, "Movement Efficiency");
-        ATTR_NAMES.put(ARMOR, "Armor");
-        ATTR_NAMES.put(ARMOR_TOUGHNESS, "Armor Toughness");
-        ATTR_NAMES.put(OXYGEN_BONUS, "Oxygen Bonus");
-        ATTR_NAMES.put(MAX_ABSORPTION, "Max Absorption");
-        ATTR_NAMES.put(KNOCKBACK_RESISTANCE, "Knockback Resistance");
-        ATTR_NAMES.put(LUCK, "Luck");
-        ATTR_NAMES.put(MAX_HEALTH, "Max Health");
-        ATTR_NAMES.put(SPAWN_REINFORCEMENTS, "Spawn Reinforcements");
-        ATTR_NAMES.put(SNEAKING_SPEED, "Sneaking Speed");
-        ATTR_NAMES.put(SAFE_FALL_DISTANCE, "Safe Fall Distance");
-        ATTR_NAMES.put(MOVEMENT_SPEED, "Movement Speed");
-        ATTR_NAMES.put(STEP_HEIGHT, "Step Height");
-        ATTR_NAMES.put(FALL_DAMAGE_MULTIPLIER, "Fall Damage Multiplier");
-        ATTR_NAMES.put(GRAVITY, "Gravity");
-        ATTR_NAMES.put(JUMP_STRENGTH, "Jump Strength");
-        ATTR_NAMES.put(EXPLOSION_KNOCKBACK_RESISTANCE, "Explosion Knockback Resistance");
-        ATTR_NAMES.put(BURNING_TIME, "Burning Time");
-        ATTR_NAMES.put(SCALE, "Scale");
-        ATTR_NAMES.put(WATER_MOVEMENT_EFFICIENCY, "Water Movement Efficiency");
-    }
-
-    private String prettifyAttrName(Attribute attr) {
-        return ATTR_NAMES.getOrDefault(attr, attr.toString());
-    }
+    private Map<Attribute, String> ATTR_NAMES = new HashMap<>();
+    private boolean tierAssignmentEnabled = true;
+    private List<String> eligibleItemTypes = new ArrayList<>();
+    private boolean qualityColorsEnabled = true;
 
     // Define tier-specific attributes and multipliers
     private static final Map<String, TierProperties> TIER_PROPERTIES = new HashMap<>();
@@ -106,15 +79,21 @@ public class TierTools extends JavaPlugin implements Listener {
     // Tier-specific bonuses
     private static final Map<String, Map<String, List<SpecialBonus>>> TIER_SPECIFIC_BONUSES = new HashMap<>();
 
-    private static class SpecialBonus {
-        final Attribute attribute;
-        final double baseValue;
-
-        SpecialBonus(Attribute attribute, double baseValue) {
-            this.attribute = attribute;
-            this.baseValue = baseValue;
-        }
+    private record SpecialBonus(Attribute attribute, double baseValue) {
     }
+
+    // Lore template keys
+    private static final NamespacedKey LORE_TEMPLATE_KEY = new NamespacedKey("tier_tools", "lore_template");
+    private static final NamespacedKey LORE_VERSION_KEY = new NamespacedKey("tier_tools", "lore_version");
+
+    // Lore templates from config
+    private String tierLineTemplate;
+    private String attributeLineTemplate;
+    private String specialAttributeLineTemplate;
+    private Map<Integer, String> qualityColors;
+
+    private boolean usePlaceholderAPI = false;
+    private MiniMessage miniMessage;
 
     @Override
     public void onEnable() {
@@ -136,13 +115,36 @@ public class TierTools extends JavaPlugin implements Listener {
         // Load tier-specific bonuses from config
         loadTierSpecificBonuses();
         
+        // Load lore templates
+        loadLoreTemplates();
+        
+        // Initialize MiniMessage
+        miniMessage = MiniMessage.builder()
+            .tags(StandardTags.defaults())
+            .build();
+
+        // Check for PlaceholderAPI
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            usePlaceholderAPI = true;
+            getLogger().info("PlaceholderAPI found! PlaceholderAPI placeholders are available.");
+        }
+        
+        // Load attribute names
+        loadAttributeNames();
+        
+        // Load eligible items
+        loadEligibleItems();
+        
+        // Load quality color settings
+        loadQualityColorSettings();
+        
         Bukkit.getPluginManager().registerEvents(this, this);
     }
 
     private void loadTierList() {
         List<String> tiers = getConfig().getStringList("tier_list");
         if (tiers.isEmpty()) {
-            getLogger().warning("No tier list found in config.yml! Using default values.");
+            getLogger().warning("No tier list found in config.yml!");
             TIERS = Arrays.asList("Common", "Uncommon", "Rare", "Epic", "Legendary");
         } else {
             TIERS = tiers;
@@ -154,8 +156,7 @@ public class TierTools extends JavaPlugin implements Listener {
         
         ConfigurationSection qualityRangesSection = getConfig().getConfigurationSection("quality_ranges");
         if (qualityRangesSection == null) {
-            getLogger().warning("No quality ranges configuration found in config.yml! Using default values.");
-            loadDefaultQualityRanges();
+            getLogger().warning("No quality ranges configuration found in config.yml!");
             return;
         }
 
@@ -173,20 +174,10 @@ public class TierTools extends JavaPlugin implements Listener {
         // Validate that we have quality ranges for all tiers
         for (String tier : TIERS) {
             if (!TIER_QUALITY_RANGES.containsKey(tier)) {
-                getLogger().warning("Missing quality range for tier: " + tier + "! Using default values.");
-                loadDefaultQualityRanges();
+                getLogger().warning("Missing quality range for tier: " + tier + "!");
                 return;
             }
         }
-    }
-
-    private void loadDefaultQualityRanges() {
-        TIER_QUALITY_RANGES.clear();
-        TIER_QUALITY_RANGES.put("Common", new QualityRange(1, 100, 2.3));
-        TIER_QUALITY_RANGES.put("Uncommon", new QualityRange(1, 100, 2.1));
-        TIER_QUALITY_RANGES.put("Rare", new QualityRange(1, 100, 1.7));
-        TIER_QUALITY_RANGES.put("Epic", new QualityRange(1, 100, 1.2));
-        TIER_QUALITY_RANGES.put("Legendary", new QualityRange(1, 100, 1.1));
     }
 
     private void loadTierSpecificBonuses() {
@@ -194,8 +185,7 @@ public class TierTools extends JavaPlugin implements Listener {
         
         ConfigurationSection bonusesSection = getConfig().getConfigurationSection("tier_specific_bonuses");
         if (bonusesSection == null) {
-            getLogger().warning("No tier-specific bonuses configuration found in config.yml! Using default values.");
-            loadDefaultTierSpecificBonuses();
+            getLogger().warning("No tier-specific bonuses configuration found in config.yml!");
             return;
         }
 
@@ -237,44 +227,14 @@ public class TierTools extends JavaPlugin implements Listener {
             }
         }
     }
-
-    private void loadDefaultTierSpecificBonuses() {
-        TIER_SPECIFIC_BONUSES.clear();
-        
-        // Rare tier bonuses
-        Map<String, List<SpecialBonus>> rareBonuses = new HashMap<>();
-        rareBonuses.put("SWORD", Arrays.asList(new SpecialBonus(LUCK, 0.2)));
-        rareBonuses.put("AXE", Arrays.asList(new SpecialBonus(LUCK, 0.2)));
-        rareBonuses.put("HELMET", Arrays.asList(new SpecialBonus(WATER_MOVEMENT_EFFICIENCY, 0.1)));
-        TIER_SPECIFIC_BONUSES.put("Rare", rareBonuses);
-
-        // Epic tier bonuses
-        Map<String, List<SpecialBonus>> epicBonuses = new HashMap<>();
-        epicBonuses.put("PICKAXE", Arrays.asList(new SpecialBonus(EXPLOSION_KNOCKBACK_RESISTANCE, 0.2)));
-        epicBonuses.put("CHESTPLATE", Arrays.asList(new SpecialBonus(MAX_HEALTH, 2.0)));
-        TIER_SPECIFIC_BONUSES.put("Epic", epicBonuses);
-
-        // Legendary tier bonuses
-        Map<String, List<SpecialBonus>> legendaryBonuses = new HashMap<>();
-        legendaryBonuses.put("SWORD", Arrays.asList(
-            new SpecialBonus(SWEEPING_DAMAGE_RATIO, 0.5),
-            new SpecialBonus(EXPLOSION_KNOCKBACK_RESISTANCE, 0.3)
-        ));
-        legendaryBonuses.put("BOOTS", Arrays.asList(
-            new SpecialBonus(STEP_HEIGHT, 0.5),
-            new SpecialBonus(JUMP_STRENGTH, 0.2)
-        ));
-        TIER_SPECIFIC_BONUSES.put("Legendary", legendaryBonuses);
-    }
-
+  
     private void loadTierProperties() {
         TIER_PROPERTIES.clear();
         
         // Get the tiers section from config
         ConfigurationSection tiersSection = getConfig().getConfigurationSection("tiers");
         if (tiersSection == null) {
-            getLogger().warning("No tiers configuration found in config.yml! Using default values.");
-            loadDefaultTierProperties();
+            getLogger().warning("No tiers configuration found in config.yml!");
             return;
         }
 
@@ -314,47 +274,11 @@ public class TierTools extends JavaPlugin implements Listener {
 
         // Validate that we have at least the basic tiers
         if (!TIER_PROPERTIES.containsKey("Common") || !TIER_PROPERTIES.containsKey("Legendary")) {
-            getLogger().warning("Missing required tiers in config.yml! Using default values.");
-            loadDefaultTierProperties();
+            getLogger().warning("Missing required tiers in config.yml");
         }
     }
 
-    private void loadDefaultTierProperties() {
-        // Common tier - Basic attributes only
-        TIER_PROPERTIES.put("Common", new TierProperties(1.0, Arrays.asList(
-            ATTACK_DAMAGE, ATTACK_SPEED, MINING_EFFICIENCY, BLOCK_BREAK_SPEED,
-            ARMOR, ARMOR_TOUGHNESS, MOVEMENT_SPEED
-        )));
 
-        // Uncommon tier - Adds utility attributes
-        TIER_PROPERTIES.put("Uncommon", new TierProperties(1.3, Arrays.asList(
-            ATTACK_DAMAGE, ATTACK_SPEED, MINING_EFFICIENCY, BLOCK_BREAK_SPEED,
-            ARMOR, ARMOR_TOUGHNESS, MOVEMENT_SPEED, ATTACK_KNOCKBACK,
-            KNOCKBACK_RESISTANCE, OXYGEN_BONUS, SAFE_FALL_DISTANCE
-        )));
-
-        // Rare tier - Adds specialized attributes
-        TIER_PROPERTIES.put("Rare", new TierProperties(1.7, Arrays.asList(
-            ATTACK_DAMAGE, ATTACK_SPEED, MINING_EFFICIENCY, BLOCK_BREAK_SPEED,
-            ARMOR, ARMOR_TOUGHNESS, MOVEMENT_SPEED, ATTACK_KNOCKBACK,
-            KNOCKBACK_RESISTANCE, OXYGEN_BONUS, SAFE_FALL_DISTANCE,
-            SWEEPING_DAMAGE_RATIO, SUBMERGED_MINING_SPEED, MAX_ABSORPTION,
-            SNEAKING_SPEED, LUCK
-        )));
-
-        // Epic tier - Adds powerful attributes
-        TIER_PROPERTIES.put("Epic", new TierProperties(2.2, Arrays.asList(
-            ATTACK_DAMAGE, ATTACK_SPEED, MINING_EFFICIENCY, BLOCK_BREAK_SPEED,
-            ARMOR, ARMOR_TOUGHNESS, MOVEMENT_SPEED, ATTACK_KNOCKBACK,
-            KNOCKBACK_RESISTANCE, OXYGEN_BONUS, SAFE_FALL_DISTANCE,
-            SWEEPING_DAMAGE_RATIO, SUBMERGED_MINING_SPEED, MAX_ABSORPTION,
-            SNEAKING_SPEED, LUCK, MAX_HEALTH, WATER_MOVEMENT_EFFICIENCY,
-            EXPLOSION_KNOCKBACK_RESISTANCE
-        )));
-
-        // Legendary tier - All attributes available
-        TIER_PROPERTIES.put("Legendary", new TierProperties(3.0, new ArrayList<>(ALL_ATTRIBUTES)));
-    }
 
     private void loadItemTypeProperties() {
         ITEM_TYPE_PROPERTIES.clear();
@@ -362,8 +286,7 @@ public class TierTools extends JavaPlugin implements Listener {
         // Get the item_types section from config
         ConfigurationSection itemTypesSection = getConfig().getConfigurationSection("item_types");
         if (itemTypesSection == null) {
-            getLogger().warning("No item types configuration found in config.yml! Using default values.");
-            loadDefaultItemTypeProperties();
+            getLogger().warning("No item types configuration found in config.yml!");
             return;
         }
 
@@ -404,124 +327,35 @@ public class TierTools extends JavaPlugin implements Listener {
 
         // Validate that we have at least the basic item types
         if (!ITEM_TYPE_PROPERTIES.containsKey("SWORD") || !ITEM_TYPE_PROPERTIES.containsKey("HELMET")) {
-            getLogger().warning("Missing required item types in config.yml! Using default values.");
-            loadDefaultItemTypeProperties();
+            getLogger().warning("Missing required item types in config.yml!");
         }
-    }
-
-    private void loadDefaultItemTypeProperties() {
-        // Weapons
-        ITEM_TYPE_PROPERTIES.put("SWORD", new ItemTypeProperties(Arrays.asList(
-            new AttributeMod(ATTACK_DAMAGE, 6.0),
-            new AttributeMod(ATTACK_SPEED, 1.6),
-            new AttributeMod(ATTACK_KNOCKBACK, 0.5),
-            new AttributeMod(SWEEPING_DAMAGE_RATIO, 0.25),
-            new AttributeMod(ENTITY_INTERACTION_RANGE, 1.0)
-        )));
-
-        ITEM_TYPE_PROPERTIES.put("AXE", new ItemTypeProperties(Arrays.asList(
-            new AttributeMod(ATTACK_DAMAGE, 5.0),
-            new AttributeMod(ATTACK_SPEED, 1.0),
-            new AttributeMod(ATTACK_KNOCKBACK, 0.8),
-            new AttributeMod(BLOCK_BREAK_SPEED, 1.5),
-            new AttributeMod(ENTITY_INTERACTION_RANGE, 1.0)
-        )));
-
-        ITEM_TYPE_PROPERTIES.put("PICKAXE", new ItemTypeProperties(Arrays.asList(
-            new AttributeMod(MINING_EFFICIENCY, 2.0),
-            new AttributeMod(BLOCK_BREAK_SPEED, 2.0),
-            new AttributeMod(SUBMERGED_MINING_SPEED, 1.0),
-            new AttributeMod(MOVEMENT_EFFICIENCY, 0.5),
-            new AttributeMod(ENTITY_INTERACTION_RANGE, 1.0)
-        )));
-
-        // Armor pieces
-        ITEM_TYPE_PROPERTIES.put("HELMET", new ItemTypeProperties(Arrays.asList(
-            new AttributeMod(ARMOR, 2.0),
-            new AttributeMod(ARMOR_TOUGHNESS, 1.0),
-            new AttributeMod(OXYGEN_BONUS, 15.0),
-            new AttributeMod(MAX_ABSORPTION, 2.0),
-            new AttributeMod(KNOCKBACK_RESISTANCE, 0.05),
-            new AttributeMod(LUCK, 0.1)
-        )));
-
-        ITEM_TYPE_PROPERTIES.put("CHESTPLATE", new ItemTypeProperties(Arrays.asList(
-            new AttributeMod(ARMOR, 6.0),
-            new AttributeMod(ARMOR_TOUGHNESS, 2.0),
-            new AttributeMod(MAX_ABSORPTION, 4.0),
-            new AttributeMod(KNOCKBACK_RESISTANCE, 0.1),
-            new AttributeMod(MAX_HEALTH, 2.0)
-        )));
-
-        ITEM_TYPE_PROPERTIES.put("LEGGINGS", new ItemTypeProperties(Arrays.asList(
-            new AttributeMod(ARMOR, 5.0),
-            new AttributeMod(ARMOR_TOUGHNESS, 2.0),
-            new AttributeMod(MAX_ABSORPTION, 3.0),
-            new AttributeMod(KNOCKBACK_RESISTANCE, 0.05),
-            new AttributeMod(MOVEMENT_SPEED, 0.1)
-        )));
-
-        ITEM_TYPE_PROPERTIES.put("BOOTS", new ItemTypeProperties(Arrays.asList(
-            new AttributeMod(ARMOR, 2.0),
-            new AttributeMod(ARMOR_TOUGHNESS, 1.0),
-            new AttributeMod(MAX_ABSORPTION, 2.0),
-            new AttributeMod(KNOCKBACK_RESISTANCE, 0.05),
-            new AttributeMod(SNEAKING_SPEED, 0.1),
-            new AttributeMod(SAFE_FALL_DISTANCE, 1.0),
-            new AttributeMod(MOVEMENT_SPEED, 0.1)
-        )));
     }
 
     // Helper classes for tier and item properties
-    private static class TierProperties {
-        final double multiplier;
-        final List<Attribute> availableAttributes;
-
-        TierProperties(double multiplier, List<Attribute> availableAttributes) {
-            this.multiplier = multiplier;
-            this.availableAttributes = availableAttributes;
-        }
+        private record TierProperties(double multiplier, List<Attribute> availableAttributes) {
     }
 
-    private static class ItemTypeProperties {
-        final List<AttributeMod> baseAttributes;
-
-        ItemTypeProperties(List<AttributeMod> baseAttributes) {
-            this.baseAttributes = baseAttributes;
-        }
+    private record ItemTypeProperties(List<AttributeMod> baseAttributes) {
     }
 
-    private static class AttributeMod {
-        final Attribute attribute;
-        final double baseValue;
-
-        AttributeMod(Attribute attribute, double baseValue) {
-            this.attribute = attribute;
-            this.baseValue = baseValue;
-        }
+    private record AttributeMod(Attribute attribute, double baseValue) {
     }
 
-    private static class QualityRange {
-        final int min;
-        final int max;
-        final double rarityFactor; // Higher means rarer high percentages
-
-        QualityRange(int min, int max, double rarityFactor) {
-            this.min = min;
-            this.max = max;
-            this.rarityFactor = rarityFactor;
-        }
+    /**
+     * @param rarityFactor Higher means rarer high percentages
+     */
+    private record QualityRange(int min, int max, double rarityFactor) {
 
         int getRandomQuality(Random random) {
-            // Use exponential distribution to make higher numbers rarer
-            double u = random.nextDouble();
-            // Transform uniform random to exponential distribution
-            double x = -Math.log(1 - u) / rarityFactor;
-            // Scale to our range and clamp
-            int quality = (int) Math.round(min + (max - min) * (1 - Math.exp(-x)));
-            return Math.min(Math.max(quality, min), max);
+                // Use exponential distribution to make higher numbers rarer
+                double u = random.nextDouble();
+                // Transform uniform random to exponential distribution
+                double x = -Math.log(1 - u) / rarityFactor;
+                // Scale to our range and clamp
+                int quality = (int) Math.round(min + (max - min) * (1 - Math.exp(-x)));
+                return Math.min(Math.max(quality, min), max);
+            }
         }
-    }
 
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
@@ -626,19 +460,10 @@ public class TierTools extends JavaPlugin implements Listener {
     }
 
     private boolean isEligibleItem(ItemStack item) {
-        if (item == null) return false;
-        Material mat = item.getType();
-        String name = mat.name();
-
-        return name.contains("SWORD")
-                || name.contains("AXE")
-                || name.contains("PICKAXE")
-                || name.contains("SHOVEL")
-                || name.contains("HOE")
-                || name.endsWith("_HELMET")
-                || name.endsWith("_CHESTPLATE")
-                || name.endsWith("_LEGGINGS")
-                || name.endsWith("_BOOTS");
+        if (!tierAssignmentEnabled || item == null) return false;
+        
+        String name = item.getType().name();
+        return eligibleItemTypes.stream().anyMatch(type -> name.contains(type));
     }
 
     private boolean hasTier(ItemStack item) {
@@ -660,14 +485,15 @@ public class TierTools extends JavaPlugin implements Listener {
         return range != null ? range.getRandomQuality(random) : 50;
     }
 
-    private Component getQualityColor(int quality) {
-        if (quality >= 95) return Component.text("").color(NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD);
-        if (quality >= 90) return Component.text("").color(NamedTextColor.LIGHT_PURPLE).decorate(TextDecoration.BOLD);
-        if (quality >= 80) return Component.text("").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD);
-        if (quality >= 70) return Component.text("").color(NamedTextColor.YELLOW);
-        if (quality >= 50) return Component.text("").color(NamedTextColor.GREEN);
-        if (quality >= 30) return Component.text("").color(NamedTextColor.GRAY);
-        return Component.text("").color(NamedTextColor.DARK_GRAY);
+    private String getQualityColor(int quality) {
+        if (!qualityColorsEnabled) return "";
+        
+        for (Map.Entry<Integer, String> entry : qualityColors.entrySet()) {
+            if (quality >= entry.getKey()) {
+                return entry.getValue();
+            }
+        }
+        return qualityColors.get(0); // Default color
     }
 
     private void assignTier(ItemStack item, String tier) {
@@ -709,20 +535,6 @@ public class TierTools extends JavaPlugin implements Listener {
         meta.getPersistentDataContainer().set(attributesKey, PersistentDataType.STRING,
             new Gson().toJson(availableAttrs));
 
-        List<Component> lore = new ArrayList<>();
-        
-        // Add tier with quality percentage in one line using TextComponent
-        Component tierComponent = Component.text("Tier: ")
-            .color(NamedTextColor.GRAY)
-            .append(Component.text(tier)
-                .color(NamedTextColor.GOLD))
-            .append(Component.text(" ")
-                .color(NamedTextColor.GRAY))
-            .append(getQualityColor(quality))
-            .append(Component.text("(" + quality + "%)"));
-        
-        lore.add(tierComponent);
-
         // Remove all existing attribute modifiers first
         for (Attribute attr : ALL_ATTRIBUTES) {
             meta.removeAttributeModifier(attr);
@@ -744,21 +556,164 @@ public class TierTools extends JavaPlugin implements Listener {
             );
 
             meta.addAttributeModifier(attrMod.attribute, mod);
-            
-            // Create attribute line using TextComponent
-            Component attrComponent = Component.text(prettifyAttrName(attrMod.attribute))
-                .color(NamedTextColor.GREEN)
-                .append(Component.text(String.format(" %+,.2f", value))
-                    .color(NamedTextColor.GREEN));
-            
-            lore.add(attrComponent);
         }
 
-        // Add special tier-specific bonuses, also affected by quality
-        addTierSpecificBonuses(meta, lore, tier, type, tierProps.multiplier * qualityMultiplier);
+        // Add special tier-specific bonuses
+        addTierSpecificBonuses(meta, tier, type, tierProps.multiplier * qualityMultiplier);
+
+        // Update the lore
+        updateItemLore(meta);
+
+        item.setItemMeta(meta);
+    }
+
+    private void updateItemLore(ItemMeta meta) {
+        if (!meta.getPersistentDataContainer().has(tierKey, PersistentDataType.STRING)) return;
+
+        String tier = meta.getPersistentDataContainer().get(tierKey, PersistentDataType.STRING);
+        int quality = meta.getPersistentDataContainer().get(qualityKey, PersistentDataType.INTEGER);
+        String qualityColor = getQualityColor(quality);
+
+        List<Component> lore = new ArrayList<>();
+
+        if (usePlaceholderAPI) {
+            // Use PlaceholderAPI format
+            String tierLine = tierLineTemplate
+                .replace("%tier_tools_tier%", tier)
+                .replace("%tier_tools_quality%", String.valueOf(quality))
+                .replace("%tier_tools_quality_color%", qualityColor);
+            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(tierLine));
+
+            // Add regular attributes
+            if (meta.getPersistentDataContainer().has(baseValueKey, PersistentDataType.STRING)) {
+                Map<String, Double> baseValues = new Gson().fromJson(
+                    meta.getPersistentDataContainer().get(baseValueKey, PersistentDataType.STRING),
+                    new TypeToken<Map<String, Double>>(){}.getType()
+                );
+
+                double tierMultiplier = meta.getPersistentDataContainer().get(tierMultiplierKey, PersistentDataType.DOUBLE);
+                double qualityMultiplier = meta.getPersistentDataContainer().get(qualityMultiplierKey, PersistentDataType.DOUBLE);
+
+                for (Map.Entry<String, Double> entry : baseValues.entrySet()) {
+                    try {
+                        NamespacedKey key = NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT));
+                        Attribute attr = Registry.ATTRIBUTE.get(key);
+                        if (attr != null) {
+                            double value = entry.getValue() * tierMultiplier * qualityMultiplier;
+                            String attrLine = attributeLineTemplate
+                                .replace("%tier_tools_attribute_name%", prettifyAttrName(attr))
+                                .replace("%tier_tools_attribute_value%", String.format("%+,.2f", value));
+                            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(attrLine));
+                        }
+                    } catch (Exception e) {
+                        getLogger().warning("Error processing attribute for lore: " + entry.getKey());
+                    }
+                }
+            }
+
+            // Add special attributes
+            for (AttributeModifier mod : meta.getAttributeModifiers().values()) {
+                if (mod.getName().startsWith("tier_special_")) {
+                    String attrName = mod.getName().substring("tier_special_".length());
+                    try {
+                        NamespacedKey key = NamespacedKey.minecraft(attrName);
+                        Attribute attr = Registry.ATTRIBUTE.get(key);
+                        if (attr != null) {
+                            String specialLine = specialAttributeLineTemplate
+                                .replace("%tier_tools_attribute_name%", prettifyAttrName(attr))
+                                .replace("%tier_tools_attribute_value%", String.format("%+,.2f", mod.getAmount()))
+                                .replace("%tier_tools_special_prefix%", "Special");
+                            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(specialLine));
+                        }
+                    } catch (Exception e) {
+                        getLogger().warning("Error processing special attribute for lore: " + attrName);
+                    }
+                }
+            }
+        } else {
+            // Use MiniMessage format
+            TagResolver tierResolver = TagResolver.resolver(
+                Placeholder.parsed("tier", tier),
+                Placeholder.parsed("quality", String.valueOf(quality)),
+                Placeholder.parsed("quality_color", qualityColor)
+            );
+
+            lore.add(miniMessage.deserialize(tierLineTemplate, tierResolver));
+
+            // Add regular attributes
+            if (meta.getPersistentDataContainer().has(baseValueKey, PersistentDataType.STRING)) {
+                Map<String, Double> baseValues = new Gson().fromJson(
+                    meta.getPersistentDataContainer().get(baseValueKey, PersistentDataType.STRING),
+                    new TypeToken<Map<String, Double>>(){}.getType()
+                );
+
+                double tierMultiplier = meta.getPersistentDataContainer().get(tierMultiplierKey, PersistentDataType.DOUBLE);
+                double qualityMultiplier = meta.getPersistentDataContainer().get(qualityMultiplierKey, PersistentDataType.DOUBLE);
+
+                for (Map.Entry<String, Double> entry : baseValues.entrySet()) {
+                    try {
+                        NamespacedKey key = NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT));
+                        Attribute attr = Registry.ATTRIBUTE.get(key);
+                        if (attr != null) {
+                            double value = entry.getValue() * tierMultiplier * qualityMultiplier;
+                            TagResolver attrResolver = TagResolver.resolver(
+                                Placeholder.parsed("attribute_name", prettifyAttrName(attr)),
+                                Placeholder.parsed("attribute_value", String.format("%+,.2f", value))
+                            );
+                            lore.add(miniMessage.deserialize(attributeLineTemplate, attrResolver));
+                        }
+                    } catch (Exception e) {
+                        getLogger().warning("Error processing attribute for lore: " + entry.getKey());
+                    }
+                }
+            }
+
+            // Add special attributes
+            for (AttributeModifier mod : Objects.requireNonNull(Objects.requireNonNull(meta.getAttributeModifiers())).values()) {
+                if (mod.getName().startsWith("tier_special_")) {
+                    String attrName = mod.getName().substring("tier_special_".length());
+                    try {
+                        NamespacedKey key = NamespacedKey.minecraft(attrName);
+                        Attribute attr = Registry.ATTRIBUTE.get(key);
+                        if (attr != null) {
+                            TagResolver specialResolver = TagResolver.resolver(
+                                Placeholder.parsed("attribute_name", prettifyAttrName(attr)),
+                                Placeholder.parsed("attribute_value", String.format("%+,.2f", mod.getAmount())),
+                                Placeholder.parsed("special_prefix", "Special")
+                            );
+                            lore.add(miniMessage.deserialize(specialAttributeLineTemplate, specialResolver));
+                        }
+                    } catch (Exception e) {
+                        getLogger().warning("Error processing special attribute for lore: " + attrName);
+                    }
+                }
+            }
+        }
 
         meta.lore(lore);
-        item.setItemMeta(meta);
+    }
+
+    private void addTierSpecificBonuses(ItemMeta meta, String tier, String type, double multiplier) {
+        Map<String, List<SpecialBonus>> tierBonuses = TIER_SPECIFIC_BONUSES.get(tier);
+        if (tierBonuses == null) return;
+
+        String itemType = getItemType(type);
+        List<SpecialBonus> bonuses = tierBonuses.get(itemType);
+        if (bonuses == null) return;
+
+        for (SpecialBonus bonus : bonuses) {
+            EquipmentSlotGroup slotGroup = getEquipmentSlotForAttr(bonus.attribute, type).getGroup();
+            NamespacedKey key = new NamespacedKey(this, "tier_special_" + bonus.attribute.toString().toLowerCase());
+
+            AttributeModifier mod = new AttributeModifier(
+                key,
+                bonus.baseValue * multiplier,
+                AttributeModifier.Operation.ADD_NUMBER,
+                slotGroup
+            );
+
+            meta.addAttributeModifier(bonus.attribute, mod);
+        }
     }
 
     private String getItemType(String materialName) {
@@ -774,54 +729,102 @@ public class TierTools extends JavaPlugin implements Listener {
         return "UNKNOWN";
     }
 
-    private void addTierSpecificBonuses(ItemMeta meta, List<Component> lore, String tier, String type, double multiplier) {
-        Map<String, List<SpecialBonus>> tierBonuses = TIER_SPECIFIC_BONUSES.get(tier);
-        if (tierBonuses == null) return;
-
-        String itemType = getItemType(type);
-        List<SpecialBonus> bonuses = tierBonuses.get(itemType);
-        if (bonuses == null) return;
-
-        for (SpecialBonus bonus : bonuses) {
-            addSpecialAttribute(meta, lore, bonus.attribute, bonus.baseValue * multiplier, type);
-        }
-    }
-
-    private void addSpecialAttribute(ItemMeta meta, List<Component> lore, Attribute attr, double value, String type) {
-        EquipmentSlotGroup slotGroup = getEquipmentSlotForAttr(attr, type).getGroup();
-        NamespacedKey key = new NamespacedKey(this, "tier_special_" + attr.toString().toLowerCase());
-
-        AttributeModifier mod = new AttributeModifier(
-            key,
-            value,
-            AttributeModifier.Operation.ADD_NUMBER,
-            slotGroup
-        );
-
-        meta.addAttributeModifier(attr, mod);
-        
-        // Create special attribute line using TextComponent
-        Component specialComponent = Component.text(prettifyAttrName(attr))
-            .color(NamedTextColor.AQUA)
-            .append(Component.text(String.format(" %+,.2f", value))
-                .color(NamedTextColor.AQUA))
-            .append(Component.text(" (Special)")
-                .color(NamedTextColor.AQUA)
-                .decorate(TextDecoration.ITALIC));
-        
-        lore.add(specialComponent);
-    }
-
     private EquipmentSlot getEquipmentSlotForAttr(Attribute attr, String itemType) {
         // Try to guess slot based on item type
         if (itemType.endsWith("_HELMET")) return EquipmentSlot.HEAD;
         if (itemType.endsWith("_CHESTPLATE")) return EquipmentSlot.CHEST;
         if (itemType.endsWith("_LEGGINGS")) return EquipmentSlot.LEGS;
         if (itemType.endsWith("_BOOTS")) return EquipmentSlot.FEET;
-        if (itemType.contains("SWORD") || itemType.contains("AXE") || itemType.contains("PICKAXE")
-                || itemType.contains("SHOVEL") || itemType.contains("HOE"))
-            return EquipmentSlot.HAND;
         return EquipmentSlot.HAND; // default
+    }
+
+    private void loadLoreTemplates() {
+        ConfigurationSection loreSection = getConfig().getConfigurationSection("lore_templates");
+        if (loreSection == null) {
+            getLogger().warning("No lore templates found in config.yml!");
+            return;
+        }
+
+        // Check if templates use PlaceholderAPI format
+        String tierLine = loreSection.getString("tier_line", "");
+        usePlaceholderAPI = tierLine.contains("%tier_tools_");
+
+        tierLineTemplate = tierLine;
+        attributeLineTemplate = loreSection.getString("attribute_line", "");
+        specialAttributeLineTemplate = loreSection.getString("special_attribute_line", "");
+    }
+
+    private void loadQualityColorSettings() {
+        ConfigurationSection qualitySection = getConfig().getConfigurationSection("quality_colors");
+        if (qualitySection == null) {
+            getLogger().warning("No quality colors configuration found in config.yml!");
+            return;
+        }
+
+        qualityColorsEnabled = qualitySection.getBoolean("enabled", true);
+        if (!qualityColorsEnabled) return;
+
+        ConfigurationSection colorsSection = qualitySection.getConfigurationSection("colors");
+        if (colorsSection == null) {
+            getLogger().warning("No quality color thresholds found in config.yml!");
+            return;
+        }
+
+        qualityColors = new TreeMap<>(Collections.reverseOrder());
+        for (String threshold : colorsSection.getKeys(false)) {
+            try {
+                int value = Integer.parseInt(threshold);
+                qualityColors.put(value, colorsSection.getString(threshold));
+            } catch (NumberFormatException e) {
+                getLogger().warning("Invalid quality color threshold: " + threshold);
+            }
+        }
+
+        if (!qualityColors.containsKey(0)) {
+            qualityColors.put(0, qualitySection.getString("default", "<dark_gray>"));
+        }
+    }
+
+    private void loadAttributeNames() {
+        ATTR_NAMES.clear();
+        ConfigurationSection attrNamesSection = getConfig().getConfigurationSection("attribute_names");
+        if (attrNamesSection == null) {
+            getLogger().warning("No attribute names found in config.yml!");
+            return;
+        }
+
+        for (String attrKey : attrNamesSection.getKeys(false)) {
+            try {
+                NamespacedKey key = NamespacedKey.minecraft(attrKey.toLowerCase(Locale.ROOT));
+                Attribute attr = Registry.ATTRIBUTE.get(key);
+                if (attr != null) {
+                    ATTR_NAMES.put(attr, attrNamesSection.getString(attrKey));
+                } else {
+                    getLogger().warning("Invalid attribute name in config: " + attrKey);
+                }
+            } catch (IllegalArgumentException e) {
+                getLogger().warning("Invalid attribute name in config: " + attrKey);
+            }
+        }
+    }
+
+    private void loadEligibleItems() {
+        ConfigurationSection eligibleSection = getConfig().getConfigurationSection("eligible_items");
+        if (eligibleSection == null) {
+            getLogger().warning("No eligible items configuration found in config.yml!");
+            return;
+        }
+
+        tierAssignmentEnabled = eligibleSection.getBoolean("enabled", true);
+        eligibleItemTypes = eligibleSection.getStringList("types");
+        
+        if (eligibleItemTypes.isEmpty()) {
+            getLogger().warning("No eligible item types found in config.yml!");
+        }
+    }
+
+    private String prettifyAttrName(Attribute attr) {
+        return ATTR_NAMES.getOrDefault(attr, attr.toString());
     }
 
 }

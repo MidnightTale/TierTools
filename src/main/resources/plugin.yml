@@ -7,3 +7,4 @@ website: https://mntale.fun
 folia-supported: true
 depend:
   - packetevents
+softdepend: [PlaceholderAPI]

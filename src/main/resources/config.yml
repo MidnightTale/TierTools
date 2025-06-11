@@ -1,3 +1,35 @@
+# Lore Templates Configuration
+# Defines how item data should be displayed in the lore
+# Supports both MiniMessage and PlaceholderAPI formats
+# Available placeholders:
+# MiniMessage placeholders:
+#   <tier> - Item's tier name
+#   <quality> - Item's quality percentage
+#   <quality_color> - Color based on quality (returns a color tag)
+#   <attribute_name> - Name of an attribute
+#   <attribute_value> - Value of an attribute (with + or - prefix)
+#   <special_prefix> - Prefix for special attributes
+# PlaceholderAPI placeholders:
+#   %tier_tools_tier% - Item's tier name
+#   %tier_tools_quality% - Item's quality percentage
+#   %tier_tools_quality_color% - Color based on quality
+#   %tier_tools_attribute_name% - Name of current attribute
+#   %tier_tools_attribute_value% - Value of current attribute
+#   %tier_tools_special_prefix% - Prefix for special attributes
+lore_templates:
+  # Templates support both MiniMessage and PlaceholderAPI formats
+  # MiniMessage format: <gray>Tier: <gold><tier> <quality_color>(<quality>%)
+  # PlaceholderAPI format: &7Tier: &6%tier_tools_tier% %tier_tools_quality_color%(%tier_tools_quality%%)
+  tier_line: "<gray>Tier: <gold><tier> <quality_color>(<quality>%)"
+  attribute_line: "<green><attribute_name> <attribute_value>"
+  special_attribute_line: "<aqua><attribute_name> <attribute_value> <aqua>(<special_prefix>)"
+  
+  # Alternative format using PlaceholderAPI (uncomment to use)
+  # tier_line: "&7Tier: &6%tier_tools_tier% %tier_tools_quality_color%(%tier_tools_quality%%)"
+  # attribute_line: "&a%tier_tools_attribute_name% %tier_tools_attribute_value%"
+  # special_attribute_line: "&b%tier_tools_attribute_name% %tier_tools_attribute_value% &b(%tier_tools_special_prefix%)"
+
+
 # Tier List Configuration
 # The order of tiers from lowest to highest
 tier_list:
@@ -206,4 +238,63 @@ item_types:
       KNOCKBACK_RESISTANCE: 0.05
       SNEAKING_SPEED: 0.1
       SAFE_FALL_DISTANCE: 1.0
-      MOVEMENT_SPEED: 0.1 
+      MOVEMENT_SPEED: 0.1
+
+# Attribute name mappings
+attribute_names:
+  GENERIC_ATTACK_DAMAGE: "Attack Damage"
+  GENERIC_ATTACK_SPEED: "Attack Speed"
+  GENERIC_ATTACK_KNOCKBACK: "Attack Knockback"
+  GENERIC_SWEEPING_DAMAGE_RATIO: "Sweeping Damage Ratio"
+  GENERIC_ENTITY_INTERACTION_RANGE: "Entity Interaction Range"
+  GENERIC_BLOCK_INTERACTION_RANGE: "Block Interaction Range"
+  GENERIC_MINING_EFFICIENCY: "Mining Efficiency"
+  GENERIC_BLOCK_BREAK_SPEED: "Block Break Speed"
+  GENERIC_SUBMERGED_MINING_SPEED: "Submerged Mining Speed"
+  GENERIC_MOVEMENT_EFFICIENCY: "Movement Efficiency"
+  GENERIC_ARMOR: "Armor"
+  GENERIC_ARMOR_TOUGHNESS: "Armor Toughness"
+  GENERIC_OXYGEN_BONUS: "Oxygen Bonus"
+  GENERIC_MAX_ABSORPTION: "Max Absorption"
+  GENERIC_KNOCKBACK_RESISTANCE: "Knockback Resistance"
+  GENERIC_LUCK: "Luck"
+  GENERIC_MAX_HEALTH: "Max Health"
+  GENERIC_SPAWN_REINFORCEMENTS: "Spawn Reinforcements"
+  GENERIC_SNEAKING_SPEED: "Sneaking Speed"
+  GENERIC_SAFE_FALL_DISTANCE: "Safe Fall Distance"
+  GENERIC_MOVEMENT_SPEED: "Movement Speed"
+  GENERIC_STEP_HEIGHT: "Step Height"
+  GENERIC_FALL_DAMAGE_MULTIPLIER: "Fall Damage Multiplier"
+  GENERIC_GRAVITY: "Gravity"
+  GENERIC_JUMP_STRENGTH: "Jump Strength"
+  GENERIC_EXPLOSION_KNOCKBACK_RESISTANCE: "Explosion Knockback Resistance"
+  GENERIC_BURNING_TIME: "Burning Time"
+  GENERIC_SCALE: "Scale"
+  GENERIC_WATER_MOVEMENT_EFFICIENCY: "Water Movement Efficiency"
+
+# Eligible item types for tier assignment
+eligible_items:
+  enabled: true  # Master toggle for tier assignment
+  types:
+    - "SWORD"
+    - "AXE"
+    - "PICKAXE"
+    - "SHOVEL"
+    - "HOE"
+    - "_HELMET"
+    - "_CHESTPLATE"
+    - "_LEGGINGS"
+    - "_BOOTS"
+
+# Quality color settings
+quality_colors:
+  enabled: true  # Master toggle for quality colors
+  colors:
+    95: "<dark_purple><bold>"
+    90: "<light_purple><bold>"
+    80: "<gold><bold>"
+    70: "<yellow>"
+    50: "<green>"
+    30: "<gray>"
+    0: "<dark_gray>"
+  default: "<dark_gray>" 
