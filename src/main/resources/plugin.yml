@@ -1,0 +1,6 @@
+name: TierTools
+version: '1.0-SNAPSHOT'
+main: fun.mntale.tierTools.TierTools
+api-version: '1.21'
+authors: [ MidnightTale_ ]
+website: https://mntale.fun
